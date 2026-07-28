@@ -3,6 +3,7 @@ import type { AppContext } from "./context.js";
 import { registerAuthGuard } from "./plugins/auth-guard.js";
 import { registerTenantContext } from "./plugins/tenant-context.js";
 import { registerAppointmentRoutes } from "./routes/appointments.js";
+import { registerAuditRoutes } from "./routes/audit.js";
 import { registerAuthRoutes } from "./routes/auth.js";
 import { registerTenantRoutes } from "./routes/tenants.js";
 
@@ -11,15 +12,16 @@ export function buildServer(context: AppContext): FastifyInstance {
 
   app.get("/health", async () => ({ status: "ok" }));
 
-  registerTenantRoutes(app, context.tenantRepository);
+  registerTenantRoutes(app, context.tenantRepository, context.auditLog);
 
   app.register(async (tenantScope) => {
     registerTenantContext(tenantScope, context.tenantRepository);
-    registerAuthRoutes(tenantScope, context.authService);
+    registerAuthRoutes(tenantScope, context.authService, context.auditLog);
 
     tenantScope.register(async (protectedScope) => {
       registerAuthGuard(protectedScope, context.authService);
-      registerAppointmentRoutes(protectedScope, context.appointmentService);
+      registerAppointmentRoutes(protectedScope, context.appointmentService, context.auditLog);
+      registerAuditRoutes(protectedScope, context.auditLog);
     });
   });
 

@@ -4,6 +4,7 @@ export interface UserRepository {
   create(input: CreateUserInput): Promise<User>;
   findById(tenantId: string, id: string): Promise<User | undefined>;
   findByEmail(tenantId: string, email: string): Promise<User | undefined>;
+  hasAnyForTenant(tenantId: string): Promise<boolean>;
 }
 
 export class DuplicateUserEmailError extends Error {

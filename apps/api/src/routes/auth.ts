@@ -1,4 +1,5 @@
 import type { FastifyInstance } from "fastify";
+import type { AuditLog } from "@adminops/audit";
 import { InvalidCredentialsError, type AuthService } from "@adminops/identity";
 
 interface AuthBody {
@@ -6,7 +7,7 @@ interface AuthBody {
   password?: unknown;
 }
 
-export function registerAuthRoutes(app: FastifyInstance, authService: AuthService): void {
+export function registerAuthRoutes(app: FastifyInstance, authService: AuthService, auditLog: AuditLog): void {
   app.post("/auth/signup", async (request, reply) => {
     const body = request.body as AuthBody;
     if (typeof body?.email !== "string" || typeof body?.password !== "string") {
@@ -18,6 +19,14 @@ export function registerAuthRoutes(app: FastifyInstance, authService: AuthServic
         tenantId: request.tenant!.tenantId,
         email: body.email,
         password: body.password,
+      });
+      await auditLog.record({
+        tenantId: request.tenant!.tenantId,
+        actorUserId: result.userId,
+        action: "user.signed_up",
+        targetType: "user",
+        targetId: result.userId,
+        metadata: { email: body.email },
       });
       return reply.code(201).send(result);
     } catch (error) {
@@ -39,6 +48,13 @@ export function registerAuthRoutes(app: FastifyInstance, authService: AuthServic
         tenantId: request.tenant!.tenantId,
         email: body.email,
         password: body.password,
+      });
+      await auditLog.record({
+        tenantId: request.tenant!.tenantId,
+        actorUserId: result.userId,
+        action: "user.logged_in",
+        targetType: "user",
+        targetId: result.userId,
       });
       return reply.send(result);
     } catch (error) {

@@ -20,6 +20,26 @@ test("signs up a user and issues a verifiable token", async () => {
   assert.equal(claims.tenantId, "tenant-a");
 });
 
+test("the first user to sign up in a tenant becomes owner; later ones start as member", async () => {
+  const auth = service();
+  const first = await auth.signUp({ tenantId: "tenant-a", email: "owner@acme.com", password: "correct-horse" });
+  const firstClaims = await auth.verifyToken(first.token);
+  assert.deepEqual(firstClaims.roles, ["owner"]);
+
+  const second = await auth.signUp({ tenantId: "tenant-a", email: "staffer@acme.com", password: "another-pass" });
+  const secondClaims = await auth.verifyToken(second.token);
+  assert.deepEqual(secondClaims.roles, ["member"]);
+});
+
+test("owner bootstrap is per tenant, not global", async () => {
+  const auth = service();
+  await auth.signUp({ tenantId: "tenant-a", email: "owner@acme.com", password: "correct-horse" });
+
+  const firstInTenantB = await auth.signUp({ tenantId: "tenant-b", email: "owner@beta.com", password: "another-pass" });
+  const claims = await auth.verifyToken(firstInTenantB.token);
+  assert.deepEqual(claims.roles, ["owner"]);
+});
+
 test("rejects a duplicate signup within the same tenant", async () => {
   const auth = service();
   await auth.signUp({ tenantId: "tenant-a", email: "owner@acme.com", password: "correct-horse" });

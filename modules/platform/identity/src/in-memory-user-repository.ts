@@ -9,6 +9,7 @@ function tenantKey(tenantId: string, email: string): string {
 export class InMemoryUserRepository implements UserRepository {
   private readonly byId = new Map<string, User>();
   private readonly idByTenantEmail = new Map<string, string>();
+  private readonly userIdsByTenant = new Map<string, Set<string>>();
 
   async create(input: CreateUserInput): Promise<User> {
     const email = normalizeEmail(input.email);
@@ -28,6 +29,9 @@ export class InMemoryUserRepository implements UserRepository {
 
     this.byId.set(user.id, user);
     this.idByTenantEmail.set(key, user.id);
+    const tenantUsers = this.userIdsByTenant.get(input.tenantId) ?? new Set<string>();
+    tenantUsers.add(user.id);
+    this.userIdsByTenant.set(input.tenantId, tenantUsers);
     return user;
   }
 
@@ -39,5 +43,9 @@ export class InMemoryUserRepository implements UserRepository {
   async findByEmail(tenantId: string, email: string): Promise<User | undefined> {
     const id = this.idByTenantEmail.get(tenantKey(tenantId, email));
     return id ? this.byId.get(id) : undefined;
+  }
+
+  async hasAnyForTenant(tenantId: string): Promise<boolean> {
+    return (this.userIdsByTenant.get(tenantId)?.size ?? 0) > 0;
   }
 }

@@ -9,7 +9,6 @@
     { "path": "../../modules/platform/tenancy" },
     { "path": "../../modules/platform/identity" },
     { "path": "../../modules/platform/audit" },
-    { "path": "../../modules/domains/branch-flow" },
-    { "path": "../../packages/persistence" }
+    { "path": "../../modules/domains/branch-flow" }
   ]
 }

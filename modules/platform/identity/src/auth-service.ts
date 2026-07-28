@@ -21,13 +21,20 @@ export class AuthService {
     private readonly tokenSecret: Uint8Array,
   ) {}
 
+  /**
+   * The first person to sign up under a tenant becomes its owner (there is
+   * no invite flow yet); everyone after that starts as an unprivileged
+   * member until an owner grants them a role.
+   */
   async signUp(input: { tenantId: string; email: string; password: string }): Promise<AuthResult> {
     assertValidEmail(input.email);
     const passwordHash = await hashPassword(input.password);
+    const isFirstUser = !(await this.users.hasAnyForTenant(input.tenantId));
     const user = await this.users.create({
       tenantId: input.tenantId,
       email: input.email,
       passwordHash,
+      roles: isFirstUser ? ["owner"] : ["member"],
     });
     return this.issueToken({ userId: user.id, tenantId: user.tenantId, roles: user.roles });
   }
