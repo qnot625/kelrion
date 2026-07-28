@@ -6,6 +6,7 @@ import { registerAppointmentRoutes } from "./routes/appointments.js";
 import { registerAuditRoutes } from "./routes/audit.js";
 import { registerAuthRoutes } from "./routes/auth.js";
 import { registerTenantRoutes } from "./routes/tenants.js";
+import { registerUserRoutes } from "./routes/users.js";
 
 export function buildServer(context: AppContext): FastifyInstance {
   const app = Fastify({ logger: false });
@@ -22,6 +23,7 @@ export function buildServer(context: AppContext): FastifyInstance {
       registerAuthGuard(protectedScope, context.authService);
       registerAppointmentRoutes(protectedScope, context.appointmentService, context.auditLog);
       registerAuditRoutes(protectedScope, context.auditLog);
+      registerUserRoutes(protectedScope, context.userRepository, context.auditLog);
     });
   });
 
