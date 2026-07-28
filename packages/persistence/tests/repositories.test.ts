@@ -82,6 +82,50 @@ test("persists users scoped per tenant, with the same email allowed across tenan
   assert.equal(await users.findById(beta.id, owner.id), undefined);
 });
 
+test("lists users per tenant and updates roles, scoped to the owning tenant", async () => {
+  const db = await freshDatabase();
+  const tenants = new PostgresTenantRepository(db);
+  const users = new PostgresUserRepository(db);
+
+  const acme = await tenants.create({ name: "Acme Clinics", slug: "acme-clinics" });
+  const beta = await tenants.create({ name: "Beta Health", slug: "beta-health" });
+
+  const owner = await users.create({
+    tenantId: acme.id,
+    email: "owner@acme.com",
+    passwordHash: "hash",
+    roles: ["owner"],
+  });
+  await users.create({
+    tenantId: acme.id,
+    email: "member@acme.com",
+    passwordHash: "hash",
+    roles: ["member"],
+  });
+  await users.create({
+    tenantId: beta.id,
+    email: "owner@beta.com",
+    passwordHash: "hash",
+    roles: ["owner"],
+  });
+
+  const acmeUsers = await users.listByTenant(acme.id);
+  assert.deepEqual(
+    acmeUsers.map((user) => user.email).sort(),
+    ["member@acme.com", "owner@acme.com"],
+    "listByTenant must not leak other tenants' users",
+  );
+  assert.equal((await users.listByTenant(beta.id)).length, 1);
+
+  const updated = await users.updateRoles(acme.id, owner.id, ["staff"]);
+  assert.deepEqual(updated?.roles, ["staff"]);
+  assert.deepEqual((await users.findById(acme.id, owner.id))?.roles, ["staff"], "must persist");
+
+  // A user from another tenant is not addressable, even with a valid id.
+  assert.equal(await users.updateRoles(beta.id, owner.id, ["owner"]), undefined);
+  assert.deepEqual((await users.findById(acme.id, owner.id))?.roles, ["staff"], "must be unchanged");
+});
+
 test("persists appointment state transitions and isolates them per tenant", async () => {
   const db = await freshDatabase();
   const tenants = new PostgresTenantRepository(db);
