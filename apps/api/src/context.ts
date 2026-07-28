@@ -17,6 +17,7 @@ import {
 
 export interface AppContext {
   tenantRepository: TenantRepository;
+  userRepository: UserRepository;
   authService: AuthService;
   appointmentService: AppointmentService;
   auditLog: AuditLog;
@@ -40,6 +41,7 @@ function assemble(
 ): AppContext {
   return {
     tenantRepository,
+    userRepository,
     authService: new AuthService(userRepository, resolveTokenSecret()),
     appointmentService: new AppointmentService(appointmentRepository),
     auditLog,
