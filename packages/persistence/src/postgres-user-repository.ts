@@ -3,6 +3,7 @@ import {
   DuplicateUserEmailError,
   normalizeEmail,
   type CreateUserInput,
+  type Role,
   type User,
   type UserRepository,
 } from "@adminops/identity";
@@ -62,6 +63,20 @@ export class PostgresUserRepository implements UserRepository {
       .from(users)
       .where(and(eq(users.tenantId, tenantId), eq(users.email, normalizeEmail(email))))
       .limit(1);
+    return row ? toUser(row) : undefined;
+  }
+
+  async listByTenant(tenantId: string): Promise<User[]> {
+    const rows = await this.db.select().from(users).where(eq(users.tenantId, tenantId));
+    return rows.map(toUser);
+  }
+
+  async updateRoles(tenantId: string, id: string, roles: readonly Role[]): Promise<User | undefined> {
+    const [row] = await this.db
+      .update(users)
+      .set({ roles: [...roles] })
+      .where(and(eq(users.tenantId, tenantId), eq(users.id, id)))
+      .returning();
     return row ? toUser(row) : undefined;
   }
 
