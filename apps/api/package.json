@@ -1,0 +1,17 @@
+{
+  "name": "@adminops/api",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node --import tsx --watch src/index.ts",
+    "start": "node --import tsx src/index.ts",
+    "test": "node --import tsx --test tests/health.test.ts tests/vertical-slice.test.ts"
+  },
+  "dependencies": {
+    "@adminops/branch-flow": "*",
+    "@adminops/identity": "*",
+    "@adminops/tenancy": "*",
+    "fastify": "^5.1.0"
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "files": [],
+  "references": [
+    { "path": "modules/platform/tenancy" },
+    { "path": "modules/platform/identity" },
+    { "path": "modules/domains/branch-flow" },
+    { "path": "apps/api" }
+  ]
+}

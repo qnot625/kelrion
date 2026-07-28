@@ -1,0 +1,26 @@
+{
+  "name": "adminops-os",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "apps/*",
+    "packages/*",
+    "modules/platform/*",
+    "modules/domains/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w apps/api",
+    "build": "tsc -b",
+    "typecheck": "tsc -b",
+    "test": "npm run test --workspaces --if-present",
+    "lint": "eslint ."
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "eslint": "^9.15.0",
+    "typescript": "^5.7.2",
+    "typescript-eslint": "^8.18.0",
+    "tsx": "^4.19.2"
+  }
+}
