@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { normalizeEmail, type CreateUserInput, type User } from "./user.js";
+import type { Role } from "./permission.js";
 import { DuplicateUserEmailError, type UserRepository } from "./user-repository.js";
 
 function tenantKey(tenantId: string, email: string): string {
@@ -43,6 +44,21 @@ export class InMemoryUserRepository implements UserRepository {
   async findByEmail(tenantId: string, email: string): Promise<User | undefined> {
     const id = this.idByTenantEmail.get(tenantKey(tenantId, email));
     return id ? this.byId.get(id) : undefined;
+  }
+
+  async listByTenant(tenantId: string): Promise<User[]> {
+    const ids = this.userIdsByTenant.get(tenantId) ?? new Set<string>();
+    return [...ids]
+      .map((id) => this.byId.get(id))
+      .filter((user): user is User => Boolean(user));
+  }
+
+  async updateRoles(tenantId: string, id: string, roles: readonly Role[]): Promise<User | undefined> {
+    const existing = await this.findById(tenantId, id);
+    if (!existing) return undefined;
+    const updated: User = { ...existing, roles: [...roles] };
+    this.byId.set(id, updated);
+    return updated;
   }
 
   async hasAnyForTenant(tenantId: string): Promise<boolean> {
