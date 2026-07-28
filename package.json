@@ -4,14 +4,16 @@
   "private": true,
   "type": "module",
   "workspaces": [
-    "apps/*",
+    "apps/api",
     "packages/*",
     "modules/platform/*",
     "modules/domains/*"
   ],
   "scripts": {
     "dev": "npm run dev -w apps/api",
+    "dev:web": "corepack pnpm --dir apps/web dev",
     "build": "tsc -b",
+    "build:web": "corepack pnpm --dir apps/web build",
     "typecheck": "tsc -b",
     "test": "npm run test --workspaces --if-present",
     "lint": "eslint ."
