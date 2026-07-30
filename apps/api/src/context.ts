@@ -14,12 +14,21 @@ import {
   PostgresUserRepository,
   runMigrations,
 } from "@adminops/persistence";
+import {
+  CustomerCaseService,
+  ExecutiveSummaryService,
+  InMemoryCustomerIntelligenceRepository,
+  PostgresCustomerIntelligenceRepository,
+  type CustomerIntelligenceRepository,
+} from "./domains/customer-intelligence/index.js";
 
 export interface AppContext {
   tenantRepository: TenantRepository;
   userRepository: UserRepository;
   authService: AuthService;
   appointmentService: AppointmentService;
+  customerCaseService: CustomerCaseService;
+  executiveSummaryService: ExecutiveSummaryService;
   auditLog: AuditLog;
   close: () => Promise<void>;
 }
@@ -36,25 +45,29 @@ function assemble(
   tenantRepository: TenantRepository,
   userRepository: UserRepository,
   appointmentRepository: AppointmentRepository,
+  customerIntelligenceRepository: CustomerIntelligenceRepository,
   auditLog: AuditLog,
   close: () => Promise<void>,
 ): AppContext {
+  const appointmentService = new AppointmentService(appointmentRepository);
   return {
     tenantRepository,
     userRepository,
     authService: new AuthService(userRepository, resolveTokenSecret()),
-    appointmentService: new AppointmentService(appointmentRepository),
+    appointmentService,
+    customerCaseService: new CustomerCaseService(customerIntelligenceRepository),
+    executiveSummaryService: new ExecutiveSummaryService(customerIntelligenceRepository, appointmentService),
     auditLog,
     close,
   };
 }
 
-/** In-memory wiring; state lives only for the life of the process. */
 export function createAppContext(): AppContext {
   return assemble(
     new InMemoryTenantRepository(),
     new InMemoryUserRepository(),
     new InMemoryAppointmentRepository(),
+    new InMemoryCustomerIntelligenceRepository(),
     new InMemoryAuditLog(),
     async () => {},
   );
@@ -67,19 +80,15 @@ export async function createPostgresAppContext(connectionString: string): Promis
     new PostgresTenantRepository(db),
     new PostgresUserRepository(db),
     new PostgresAppointmentRepository(db),
+    new PostgresCustomerIntelligenceRepository(db),
     new PostgresAuditLog(db),
     close,
   );
 }
 
-/** Uses Postgres when DATABASE_URL is set, otherwise falls back to in-memory. */
 export async function createAppContextFromEnv(): Promise<AppContext> {
   const connectionString = process.env.DATABASE_URL;
-  if (connectionString) {
-    return createPostgresAppContext(connectionString);
-  }
-  if (process.env.NODE_ENV === "production") {
-    throw new Error("DATABASE_URL must be set in production");
-  }
+  if (connectionString) return createPostgresAppContext(connectionString);
+  if (process.env.NODE_ENV === "production") throw new Error("DATABASE_URL must be set in production");
   return createAppContext();
 }
