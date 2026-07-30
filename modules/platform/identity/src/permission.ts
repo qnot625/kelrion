@@ -4,12 +4,21 @@ export type Permission =
   | "appointments:book"
   | "appointments:manage"
   | "appointments:view"
-  | "tenant:manage";
+  | "tenant:manage"
+  | "cases:create"
+  | "cases:manage"
+  | "analytics:view";
 
 const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
-  owner: ["appointments:book", "appointments:manage", "appointments:view", "tenant:manage"],
-  staff: ["appointments:book", "appointments:manage", "appointments:view"],
-  member: ["appointments:book"],
+  owner: [
+    "appointments:book", "appointments:manage", "appointments:view", "tenant:manage",
+    "cases:create", "cases:manage", "analytics:view",
+  ],
+  staff: [
+    "appointments:book", "appointments:manage", "appointments:view",
+    "cases:create", "cases:manage", "analytics:view",
+  ],
+  member: ["appointments:book", "cases:create"],
 };
 
 function isKnownRole(role: string): role is Role {
@@ -19,11 +28,7 @@ function isKnownRole(role: string): role is Role {
 export function permissionsForRoles(roles: readonly string[]): Set<Permission> {
   const permissions = new Set<Permission>();
   for (const role of roles) {
-    if (isKnownRole(role)) {
-      for (const permission of ROLE_PERMISSIONS[role]) {
-        permissions.add(permission);
-      }
-    }
+    if (isKnownRole(role)) for (const permission of ROLE_PERMISSIONS[role]) permissions.add(permission);
   }
   return permissions;
 }
