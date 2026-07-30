@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { sql } from "drizzle-orm";
@@ -19,12 +19,18 @@ export function connectPostgres(connectionString: string): PostgresConnection {
   };
 }
 
-/** Applies the initial schema. Idempotent — every statement is IF NOT EXISTS. */
+/** Applies every SQL migration in filename order. Statements remain idempotent. */
 export async function runMigrations(db: Database): Promise<void> {
-  const migrationPath = fileURLToPath(new URL("../migrations/0001_initial.sql", import.meta.url));
-  const contents = await readFile(migrationPath, "utf8");
-  for (const statement of splitSqlStatements(contents)) {
-    await db.execute(sql.raw(statement));
+  const migrationDirectory = fileURLToPath(new URL("../migrations", import.meta.url));
+  const files = (await readdir(migrationDirectory))
+    .filter((file) => file.endsWith(".sql"))
+    .sort((a, b) => a.localeCompare(b));
+
+  for (const file of files) {
+    const contents = await readFile(`${migrationDirectory}/${file}`, "utf8");
+    for (const statement of splitSqlStatements(contents)) {
+      await db.execute(sql.raw(statement));
+    }
   }
 }
 
