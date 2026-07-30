@@ -7,6 +7,8 @@ import { AuditView } from "./views/AuditView";
 import { AuthView } from "./views/AuthView";
 import { DashboardView } from "./views/DashboardView";
 import { FoundationView } from "./views/FoundationView";
+import { LeaveView } from "./views/LeaveView";
+import { LifecycleView } from "./views/LifecycleView";
 import { OnboardingView } from "./views/OnboardingView";
 import { QueueView } from "./views/QueueView";
 import { RecruitmentView } from "./views/RecruitmentView";
@@ -43,6 +45,8 @@ export default function App() {
     appointments: <AppointmentsView session={session} />,
     queue: <QueueView />,
     users: <UsersView session={session} />,
+    leave: <LeaveView session={session} />,
+    lifecycle: <LifecycleView session={session} />,
     recruitment: <RecruitmentView />,
     audit: <AuditView session={session} />,
     reports: <FoundationView title="Reports and analytics" />,
