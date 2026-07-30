@@ -4,6 +4,7 @@ import App from "./App";
 import "./styles/base.css";
 import "./styles/shell.css";
 import "./styles/views.css";
+import "./features/customer-intelligence/customer-intelligence.css";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode><App /></React.StrictMode>,
