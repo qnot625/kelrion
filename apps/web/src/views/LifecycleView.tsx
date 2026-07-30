@@ -63,9 +63,17 @@ export function LifecycleView({ session }: { readonly session: KlerionSession })
         title: String(data.get("title") || ""),
         dueAt: String(data.get("dueAt") || "") || undefined,
       };
-      const plan =
+      const plan: ApiLifecyclePlan =
         session.mode === "demo"
-          ? { ...demoPlans[0], id: `demo-${Date.now()}`, ...input, status: "active" as const }
+          ? {
+              ...demoPlans[0]!,
+              id: `demo-${Date.now()}`,
+              subjectUserId: input.subjectUserId,
+              kind: input.kind,
+              title: input.title,
+              dueAt: input.dueAt ?? null,
+              status: "active",
+            }
           : await klerionApi.createLifecyclePlan(session, input);
       setPlans((current) => [plan, ...current]);
       setShowForm(false);
