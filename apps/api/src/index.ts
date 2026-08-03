@@ -1,16 +1,22 @@
-import { createAppContextFromEnv } from "./context.js";
 import { buildServer } from "./server.js";
 
-const port = Number(process.env.PORT ?? 3000);
+const PORT = parseInt(process.env.PORT || "3000", 10);
+const HOST = process.env.HOST || "0.0.0.0";
 
-const context = await createAppContextFromEnv();
-const app = buildServer(context);
+const server = buildServer({ logger: true });
 
-try {
-  await app.listen({ port, host: "0.0.0.0" });
-  console.warn(`AdminOps API listening on port ${port}`);
-} catch (error) {
-  console.error(error);
-  await context.close();
-  process.exit(1);
+async function start() {
+  try {
+    await server.listen({ port: PORT, host: HOST });
+    console.log(`AdminOps API Service running on http://${HOST}:${PORT}`);
+  } catch (err) {
+    server.log.error(err);
+    process.exit(1);
+  }
 }
+
+if (process.env.NODE_ENV !== "test") {
+  start();
+}
+
+export { buildServer };

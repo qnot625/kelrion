@@ -1,7 +1,7 @@
-export * as schema from "./schema.js";
-export * from "./database.js";
+export * from "./schema.js";
 export * from "./connect.js";
-export * from "./postgres-tenant-repository.js";
-export * from "./postgres-user-repository.js";
-export * from "./postgres-appointment-repository.js";
-export * from "./postgres-audit-log.js";
+export * from "./database.js";
+export * from "./postgres-queue-repository.js";
+export * from "./postgres-ticket-repository.js";
+export * from "./postgres-notification-repository.js";
+

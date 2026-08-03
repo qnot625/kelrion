@@ -3,13 +3,14 @@ import { defineConfig, loadEnv } from "vite";
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
-  const apiOrigin = env.KLERION_API_ORIGIN || "http://localhost:3000";
+  const apiOrigin = env.KLERION_API_ORIGIN || "http://127.0.0.1:3001";
 
   return {
     plugins: [react()],
     server: {
-      port: 5173,
-      strictPort: true,
+      port: 3000,
+      host: "0.0.0.0",
+      strictPort: false,
       proxy: {
         "/api": {
           target: apiOrigin,
@@ -19,13 +20,14 @@ export default defineConfig(({ mode }) => {
       },
     },
     preview: {
-      port: 4173,
-      strictPort: true,
+      port: 3000,
+      host: "0.0.0.0",
+      strictPort: false,
     },
     build: {
       target: "es2022",
       sourcemap: true,
-      outDir: "dist",
+      outDir: "../../dist",
       emptyOutDir: true,
     },
   };

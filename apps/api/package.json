@@ -3,21 +3,21 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
+  "main": "./src/index.ts",
   "scripts": {
-    "dev": "node --import tsx --watch src/index.ts",
-    "start": "node --import tsx src/index.ts",
-    "test": "node --import tsx --test tests/health.test.ts tests/vertical-slice.test.ts tests/rbac.test.ts tests/audit.test.ts tests/user-roles.test.ts tests/postgres-integration.test.ts"
-  },
-  "devDependencies": {
-    "@electric-sql/pglite": "^0.2.15",
-    "drizzle-orm": "^0.45.2"
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc --noEmit",
+    "test": "node --import tsx --test tests/**/*.test.ts"
   },
   "dependencies": {
-    "@adminops/audit": "*",
-    "@adminops/branch-flow": "*",
-    "@adminops/identity": "*",
     "@adminops/persistence": "*",
-    "@adminops/tenancy": "*",
-    "fastify": "^5.1.0"
+    "@klerion/notifications": "*",
+    "@klerion/queue": "*",
+    "fastify": "^5.11.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
   }
 }

@@ -3,20 +3,22 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "exports": "./src/index.ts",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
   "scripts": {
-    "test": "node --import tsx --test tests/repositories.test.ts"
+    "test": "node --import tsx --test tests/**/*.test.ts"
   },
   "dependencies": {
-    "@adminops/audit": "*",
-    "@adminops/branch-flow": "*",
-    "@adminops/identity": "*",
-    "@adminops/tenancy": "*",
-    "drizzle-orm": "^0.45.2",
-    "pg": "^8.13.1"
+    "@electric-sql/pglite": "^0.2.17",
+    "@klerion/notifications": "*",
+    "@klerion/queue": "*",
+    "drizzle-orm": "^0.40.1"
   },
   "devDependencies": {
-    "@electric-sql/pglite": "^0.2.15",
-    "@types/pg": "^8.11.10"
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
   }
 }

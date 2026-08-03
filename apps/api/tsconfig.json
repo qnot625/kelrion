@@ -1,15 +1,13 @@
 {
-  "extends": "@adminops/tsconfig/base.json",
   "compilerOptions": {
-    "rootDir": "src",
-    "outDir": "dist"
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "declaration": true,
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true
   },
-  "include": ["src"],
-  "references": [
-    { "path": "../../modules/platform/tenancy" },
-    { "path": "../../modules/platform/identity" },
-    { "path": "../../modules/platform/audit" },
-    { "path": "../../modules/domains/branch-flow" },
-    { "path": "../../packages/persistence" }
-  ]
+  "include": ["src/**/*"]
 }

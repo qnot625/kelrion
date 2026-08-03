@@ -1,8 +1,5 @@
-import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
+import type { NodePgDatabase } from "drizzle-orm/node-postgres";
+import type { PgliteDatabase } from "drizzle-orm/pglite";
 import type * as schema from "./schema.js";
 
-/**
- * Driver-agnostic handle: the same repositories run against node-postgres in
- * production and PGlite (real Postgres, WASM) in tests.
- */
-export type Database = PgDatabase<PgQueryResultHKT, typeof schema>;
+export type Database = NodePgDatabase<typeof schema> | PgliteDatabase<typeof schema>;

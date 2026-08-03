@@ -1,10 +1,8 @@
 {
   "files": [],
   "references": [
-    { "path": "modules/platform/tenancy" },
-    { "path": "modules/platform/identity" },
-    { "path": "modules/platform/audit" },
-    { "path": "modules/domains/branch-flow" },
+    { "path": "modules/domains/queue" },
+    { "path": "modules/platform/notifications" },
     { "path": "packages/persistence" },
     { "path": "apps/api" }
   ]
