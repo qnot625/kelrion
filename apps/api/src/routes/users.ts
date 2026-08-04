@@ -53,7 +53,7 @@ export function registerUserRoutes(
       const removesOwner = target.roles.includes("owner") && !roles.includes("owner");
       if (removesOwner) {
         const users = await userRepository.listByTenant(tenantId);
-        const ownerCount = users.filter((user) => user.roles.includes("owner")).length;
+        const ownerCount = users.filter((user: { roles: readonly string[] }) => user.roles.includes("owner")).length;
         if (ownerCount <= 1) {
           return reply.code(409).send({ error: "The tenant must retain at least one owner" });
         }

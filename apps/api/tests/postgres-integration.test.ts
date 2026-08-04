@@ -8,7 +8,8 @@ import {
   PostgresAppointmentRepository,
   PostgresAuditLog,
   PostgresTenantRepository,
-  PostgresUserRepository,
+  PostgresUserRepository, PostgresBranchRepository, PostgresServiceRepository,
+  PostgresWaitlistRepository,
   runMigrations,
   schema,
   type Database,
@@ -21,13 +22,24 @@ async function postgresBackedContext(): Promise<AppContext> {
   const db = drizzle(new PGlite(), { schema }) as unknown as Database;
   await runMigrations(db);
 
+  const branchRepository = new PostgresBranchRepository(db);
+  const serviceRepository = new PostgresServiceRepository(db);
+
   return {
     tenantRepository: new PostgresTenantRepository(db),
+    userRepository: new PostgresUserRepository(db),
+    branchRepository,
+    serviceRepository,
     authService: new AuthService(
       new PostgresUserRepository(db),
       new TextEncoder().encode("test-only-secret"),
     ),
-    appointmentService: new AppointmentService(new PostgresAppointmentRepository(db)),
+    appointmentService: new AppointmentService(
+      new PostgresAppointmentRepository(db),
+      branchRepository,
+      serviceRepository,
+      new PostgresWaitlistRepository(db),
+    ),
     auditLog: new PostgresAuditLog(db),
     close: async () => {},
   };
@@ -60,13 +72,20 @@ test("the full customer visit journey runs against real Postgres", async () => {
   });
   assert.equal(login.statusCode, 200, login.body);
 
+  const b1Req = await app.inject({ method: "POST", url: "/branches", headers: { "x-tenant-slug": "acme-clinics", authorization: `Bearer ${owner.token}` }, payload: { name: "Downtown", slug: "downtown", address: "123 Main St", latitude: 51, longitude: -0.1, status: "active" } });
+  await app.inject({ method: "POST", url: `/branches/${b1Req.json().id}/operating-windows`, headers: { "x-tenant-slug": "acme-clinics", authorization: `Bearer ${owner.token}` }, payload: [{ dayOfWeek: 6, openMinutes: 480, closeMinutes: 1020 }] }); // Saturday
+  await app.inject({ method: "POST", url: `/branches/${b1Req.json().id}/departments`, headers: { "x-tenant-slug": "acme-clinics", authorization: `Bearer ${owner.token}` }, payload: { name: "D1", slug: "d1", capacity: 1 } });
+  const s1Req = await app.inject({ method: "POST", url: "/services", headers: { "x-tenant-slug": "acme-clinics", authorization: `Bearer ${owner.token}` }, payload: { code: "S1", name: "S1", durationMinutes: 30 } });
+  await app.inject({ method: "POST", url: `/branches/${b1Req.json().id}/services`, headers: { "x-tenant-slug": "acme-clinics", authorization: `Bearer ${owner.token}` }, payload: { serviceId: s1Req.json().id } });
+
   const book = await app.inject({
     method: "POST",
     url: "/appointments",
     headers: { "x-tenant-slug": "acme-clinics", authorization: `Bearer ${owner.token}` },
     payload: {
       customerEmail: "patient@example.com",
-      serviceName: "General consultation",
+      branchId: b1Req.json().id,
+      serviceId: s1Req.json().id,
       startAt: "2026-08-01T09:00:00Z",
       endAt: "2026-08-01T09:30:00Z",
     },
@@ -99,6 +118,10 @@ test("the full customer visit journey runs against real Postgres", async () => {
       "tenant.created",
       "user.signed_up",
       "user.logged_in",
+      "branch.created",
+      "department.created",
+      "service.created",
+      "branch.service_assigned",
       "appointment.booked",
       "appointment.checked_in",
       "appointment.completed",
@@ -135,13 +158,20 @@ test("tenant isolation holds when backed by real Postgres", async () => {
     })
   ).json() as { token: string };
 
+  const b1Req = await app.inject({ method: "POST", url: "/branches", headers: { "x-tenant-slug": "acme-clinics", authorization: `Bearer ${acmeOwner.token}` }, payload: { name: "Downtown", slug: "downtown", address: "123 Main St", latitude: 51, longitude: -0.1, status: "active" } });
+  await app.inject({ method: "POST", url: `/branches/${b1Req.json().id}/operating-windows`, headers: { "x-tenant-slug": "acme-clinics", authorization: `Bearer ${acmeOwner.token}` }, payload: [{ dayOfWeek: 6, openMinutes: 480, closeMinutes: 1020 }] }); // Saturday
+  await app.inject({ method: "POST", url: `/branches/${b1Req.json().id}/departments`, headers: { "x-tenant-slug": "acme-clinics", authorization: `Bearer ${acmeOwner.token}` }, payload: { name: "D1", slug: "d1", capacity: 1 } });
+  const s1Req = await app.inject({ method: "POST", url: "/services", headers: { "x-tenant-slug": "acme-clinics", authorization: `Bearer ${acmeOwner.token}` }, payload: { code: "S1", name: "S1", durationMinutes: 30 } });
+  await app.inject({ method: "POST", url: `/branches/${b1Req.json().id}/services`, headers: { "x-tenant-slug": "acme-clinics", authorization: `Bearer ${acmeOwner.token}` }, payload: { serviceId: s1Req.json().id } });
+
   const book = await app.inject({
     method: "POST",
     url: "/appointments",
     headers: { "x-tenant-slug": "acme-clinics", authorization: `Bearer ${acmeOwner.token}` },
     payload: {
       customerEmail: "patient@example.com",
-      serviceName: "General consultation",
+      branchId: b1Req.json().id,
+      serviceId: s1Req.json().id,
       startAt: "2026-08-01T09:00:00Z",
       endAt: "2026-08-01T09:30:00Z",
     },

@@ -1,6 +1,6 @@
 import {
   BarChart3, Bell, BriefcaseBusiness, CalendarDays, ChevronDown, Command,
-  LayoutDashboard, Menu, Plus, Search, ShieldCheck, TicketCheck, UserCog, X,
+  LayoutDashboard, Menu, Plus, Search, ShieldCheck, TicketCheck, UserCog, X, MapPin, Layers,
   type LucideIcon,
 } from "lucide-react";
 import { useMemo, useState, type ReactNode } from "react";
@@ -8,12 +8,14 @@ import type { KlerionSession } from "../lib/session";
 import { displayNameFromEmail } from "../lib/session";
 import { Brand } from "./Brand";
 
-export type RouteKey = "dashboard" | "appointments" | "queue" | "users" | "recruitment" | "audit" | "reports";
+export type RouteKey = "dashboard" | "appointments" | "queue" | "services" | "branches" | "users" | "recruitment" | "audit" | "reports";
 
 const nav: Array<{ key: RouteKey; label: string; icon: LucideIcon; badge?: string }> = [
   { key: "dashboard", label: "Overview", icon: LayoutDashboard },
   { key: "appointments", label: "Appointments", icon: CalendarDays, badge: "10" },
   { key: "queue", label: "Live queue", icon: TicketCheck, badge: "Live" },
+  { key: "services", label: "Service Catalog", icon: Layers },
+  { key: "branches", label: "Branches", icon: MapPin },
   { key: "users", label: "Users & roles", icon: UserCog },
   { key: "recruitment", label: "Recruitment", icon: BriefcaseBusiness, badge: "12" },
   { key: "audit", label: "Audit trail", icon: ShieldCheck },

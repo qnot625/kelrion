@@ -5,7 +5,7 @@
   "type": "module",
   "exports": "./src/index.ts",
   "scripts": {
-    "test": "node --import tsx --test tests/repositories.test.ts"
+    "test": "node --import tsx --test 'tests/**/*.test.ts'"
   },
   "dependencies": {
     "@adminops/audit": "*",

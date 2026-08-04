@@ -31,7 +31,7 @@ export function registerAuthRoutes(app: FastifyInstance, authService: AuthServic
       return reply.code(201).send(result);
     } catch (error) {
       if (error instanceof Error) {
-        return reply.code(400).send({ error: error.message });
+        return reply.code(400).send({ error: (error as Error).message });
       }
       throw error;
     }
@@ -59,7 +59,7 @@ export function registerAuthRoutes(app: FastifyInstance, authService: AuthServic
       return reply.send(result);
     } catch (error) {
       if (error instanceof InvalidCredentialsError) {
-        return reply.code(401).send({ error: error.message });
+        return reply.code(401).send({ error: (error as Error).message });
       }
       throw error;
     }

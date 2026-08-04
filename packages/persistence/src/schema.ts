@@ -7,7 +7,9 @@ import {
   timestamp,
   uniqueIndex,
   uuid,
+  integer,
 } from "drizzle-orm/pg-core";
+import { branches, branchHolidays, departments, services } from "./schema/branch-flow.js";
 
 export const tenants = pgTable(
   "tenants",
@@ -43,14 +45,25 @@ export const appointments = pgTable(
     tenantId: uuid("tenant_id")
       .notNull()
       .references(() => tenants.id, { onDelete: "cascade" }),
+    branchId: uuid("branch_id")
+      .notNull()
+      .references(() => branches.id, { onDelete: "cascade" }),
+    serviceId: uuid("service_id")
+      .notNull()
+      .references(() => services.id, { onDelete: "cascade" }),
     customerEmail: text("customer_email").notNull(),
-    serviceName: text("service_name").notNull(),
+    customerMetadata: jsonb("customer_metadata").$type<Record<string, unknown>>().notNull().default({}),
     startAt: timestamp("start_at", { withTimezone: true }).notNull(),
     endAt: timestamp("end_at", { withTimezone: true }).notNull(),
     status: text("status").notNull().default("booked"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => [index("appointments_tenant_start_idx").on(table.tenantId, table.startAt)],
+  (table) => [
+    index("appointments_tenant_start_idx").on(table.tenantId, table.startAt),
+    index("appointments_tenant_status_idx").on(table.tenantId, table.status),
+    index("appointments_tenant_branch_idx").on(table.tenantId, table.branchId),
+    index("appointments_tenant_service_idx").on(table.tenantId, table.serviceId),
+  ],
 );
 
 export const auditEvents = pgTable(
@@ -76,4 +89,75 @@ export const tenantsRelations = relations(tenants, ({ many }) => ({
   users: many(users),
   appointments: many(appointments),
   auditEvents: many(auditEvents),
+  branches: many(branches),
+  branchHolidays: many(branchHolidays),
+  departments: many(departments),
+  waitlists: many(waitlists),
 }));
+
+
+export const appointmentsRelations = relations(appointments, ({ one, many }) => ({
+  tenant: one(tenants, {
+    fields: [appointments.tenantId],
+    references: [tenants.id],
+  }),
+  branch: one(branches, {
+    fields: [appointments.branchId],
+    references: [branches.id],
+  }),
+  service: one(services, {
+    fields: [appointments.serviceId],
+    references: [services.id],
+  }),
+  waitlists: many(waitlists),
+}));
+
+export const waitlists = pgTable(
+  "waitlists",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    appointmentId: uuid("appointment_id")
+      .references(() => appointments.id, { onDelete: "cascade" }),
+    branchId: uuid("branch_id")
+      .notNull()
+      .references(() => branches.id, { onDelete: "cascade" }),
+    serviceId: uuid("service_id")
+      .notNull()
+      .references(() => services.id, { onDelete: "cascade" }),
+    customerEmail: text("customer_email").notNull(),
+    customerMetadata: jsonb("customer_metadata").$type<Record<string, unknown>>().notNull().default({}),
+    queuePosition: integer("queue_position").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("waitlists_tenant_idx").on(table.tenantId),
+    index("waitlists_tenant_branch_idx").on(table.tenantId, table.branchId),
+    index("waitlists_tenant_service_idx").on(table.tenantId, table.serviceId),
+    index("waitlists_tenant_queue_position_idx").on(table.tenantId, table.queuePosition),
+  ],
+);
+
+export const waitlistsRelations = relations(waitlists, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [waitlists.tenantId],
+    references: [tenants.id],
+  }),
+  appointment: one(appointments, {
+    fields: [waitlists.appointmentId],
+    references: [appointments.id],
+  }),
+  branch: one(branches, {
+    fields: [waitlists.branchId],
+    references: [branches.id],
+  }),
+  service: one(services, {
+    fields: [waitlists.serviceId],
+    references: [services.id],
+  }),
+}));
+
+export * from "./schema/branch-flow.js";

@@ -4,7 +4,13 @@ import { InMemoryTenantRepository, type TenantRepository } from "@adminops/tenan
 import {
   AppointmentService,
   InMemoryAppointmentRepository,
+  InMemoryBranchRepository,
+  InMemoryServiceRepository,
+  InMemoryWaitlistRepository,
   type AppointmentRepository,
+  type BranchRepository,
+  type ServiceRepository,
+  type WaitlistRepository,
 } from "@adminops/branch-flow";
 import {
   connectPostgres,
@@ -12,12 +18,17 @@ import {
   PostgresAuditLog,
   PostgresTenantRepository,
   PostgresUserRepository,
+  PostgresBranchRepository,
+  PostgresServiceRepository,
+  PostgresWaitlistRepository,
   runMigrations,
 } from "@adminops/persistence";
 
 export interface AppContext {
   tenantRepository: TenantRepository;
   userRepository: UserRepository;
+  branchRepository: BranchRepository;
+  serviceRepository: ServiceRepository;
   authService: AuthService;
   appointmentService: AppointmentService;
   auditLog: AuditLog;
@@ -35,15 +46,25 @@ function resolveTokenSecret(): Uint8Array {
 function assemble(
   tenantRepository: TenantRepository,
   userRepository: UserRepository,
+  branchRepository: BranchRepository,
+  serviceRepository: ServiceRepository,
   appointmentRepository: AppointmentRepository,
+  waitlistRepository: WaitlistRepository,
   auditLog: AuditLog,
   close: () => Promise<void>,
 ): AppContext {
   return {
     tenantRepository,
     userRepository,
+    branchRepository,
+    serviceRepository,
     authService: new AuthService(userRepository, resolveTokenSecret()),
-    appointmentService: new AppointmentService(appointmentRepository),
+    appointmentService: new AppointmentService(
+      appointmentRepository,
+      branchRepository,
+      serviceRepository,
+      waitlistRepository,
+    ),
     auditLog,
     close,
   };
@@ -54,7 +75,10 @@ export function createAppContext(): AppContext {
   return assemble(
     new InMemoryTenantRepository(),
     new InMemoryUserRepository(),
+    new InMemoryBranchRepository(),
+    new InMemoryServiceRepository(),
     new InMemoryAppointmentRepository(),
+    new InMemoryWaitlistRepository(),
     new InMemoryAuditLog(),
     async () => {},
   );
@@ -66,7 +90,10 @@ export async function createPostgresAppContext(connectionString: string): Promis
   return assemble(
     new PostgresTenantRepository(db),
     new PostgresUserRepository(db),
+    new PostgresBranchRepository(db),
+    new PostgresServiceRepository(db),
     new PostgresAppointmentRepository(db),
+    new PostgresWaitlistRepository(db),
     new PostgresAuditLog(db),
     close,
   );

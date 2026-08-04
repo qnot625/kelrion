@@ -11,6 +11,9 @@ import { OnboardingView } from "./views/OnboardingView";
 import { QueueView } from "./views/QueueView";
 import { RecruitmentView } from "./views/RecruitmentView";
 import { UsersView } from "./views/UsersView";
+import { BranchManagement } from "./features/branches/BranchManagement";
+import { ServiceCatalog } from "./features/services/ServiceCatalog";
+import { CustomerBookingFlow } from "./views/CustomerBookingFlow";
 
 type Stage = "auth" | "onboarding" | "app";
 
@@ -20,6 +23,9 @@ export default function App() {
   const [stage, setStage] = useState<Stage>(stored ? "app" : "auth");
   const [route, setRoute] = useState<RouteKey>("dashboard");
   const [apiReachable, setApiReachable] = useState<boolean | null>(null);
+  const [isPublicBooking, setIsPublicBooking] = useState<boolean>(() => {
+    return window.location.search.includes("booking=true") || window.location.hash === "#book";
+  });
 
   useEffect(() => { let mounted = true; void klerionApi.health().then((value) => mounted && setApiReachable(value)); return () => { mounted = false; }; }, []);
 
@@ -35,13 +41,34 @@ export default function App() {
 
   function signOut() { clearSession(); setSession(null); setStage("auth"); setRoute("dashboard"); }
 
-  if (!session || stage === "auth") return <AuthView onAuth={authenticate} onDemo={openDemo} />;
+  if (isPublicBooking) {
+    return (
+      <CustomerBookingFlow
+        onBackToLogin={() => {
+          setIsPublicBooking(false);
+          window.location.hash = "";
+        }}
+      />
+    );
+  }
+
+  if (!session || stage === "auth") {
+    return (
+      <AuthView
+        onAuth={authenticate}
+        onDemo={openDemo}
+        onPublicBooking={() => setIsPublicBooking(true)}
+      />
+    );
+  }
   if (stage === "onboarding") return <OnboardingView onComplete={() => setStage("app")} />;
 
   const views: Record<RouteKey, React.ReactNode> = {
     dashboard: <DashboardView />,
     appointments: <AppointmentsView session={session} />,
-    queue: <QueueView />,
+    queue: <QueueView session={session} />,
+    services: <ServiceCatalog session={session} />,
+    branches: <BranchManagement session={session} />,
     users: <UsersView session={session} />,
     recruitment: <RecruitmentView />,
     audit: <AuditView session={session} />,

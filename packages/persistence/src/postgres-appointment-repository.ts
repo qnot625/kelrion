@@ -1,4 +1,4 @@
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, lt, gt } from "drizzle-orm";
 import type {
   Appointment,
   AppointmentRepository,
@@ -13,8 +13,10 @@ function toAppointment(row: AppointmentRow): Appointment {
   return {
     id: row.id,
     tenantId: row.tenantId,
+    branchId: row.branchId,
+    serviceId: row.serviceId,
     customerEmail: row.customerEmail,
-    serviceName: row.serviceName,
+    customerMetadata: row.customerMetadata as Record<string, unknown>,
     startAt: row.startAt,
     endAt: row.endAt,
     status: row.status as AppointmentStatus,
@@ -31,8 +33,10 @@ export class PostgresAppointmentRepository implements AppointmentRepository {
       .values({
         id: appointment.id,
         tenantId: appointment.tenantId,
+        branchId: appointment.branchId,
+        serviceId: appointment.serviceId,
         customerEmail: appointment.customerEmail,
-        serviceName: appointment.serviceName,
+        customerMetadata: appointment.customerMetadata,
         startAt: appointment.startAt,
         endAt: appointment.endAt,
         status: appointment.status,
@@ -60,5 +64,59 @@ export class PostgresAppointmentRepository implements AppointmentRepository {
       .where(eq(appointments.tenantId, tenantId))
       .orderBy(asc(appointments.startAt));
     return rows.map(toAppointment);
+  }
+
+  async listByBranchAndDateRange(
+    tenantId: string,
+    branchId: string,
+    startAt: Date,
+    endAt: Date
+  ): Promise<Appointment[]> {
+    const rows = await this.db
+      .select()
+      .from(appointments)
+      .where(
+        and(
+          eq(appointments.tenantId, tenantId),
+          eq(appointments.branchId, branchId),
+          lt(appointments.startAt, endAt),
+          gt(appointments.endAt, startAt)
+        )
+      )
+      .orderBy(asc(appointments.startAt));
+    return rows.map(toAppointment);
+  }
+
+  async reschedule(
+    tenantId: string,
+    id: string,
+    newStartAt: Date,
+    newEndAt: Date
+  ): Promise<Appointment | undefined> {
+    const [updatedRow] = await this.db
+      .update(appointments)
+      .set({
+        startAt: newStartAt,
+        endAt: newEndAt,
+      })
+      .where(and(eq(appointments.tenantId, tenantId), eq(appointments.id, id)))
+      .returning();
+
+    return updatedRow ? toAppointment(updatedRow) : undefined;
+  }
+
+  async cancel(
+    tenantId: string,
+    id: string
+  ): Promise<Appointment | undefined> {
+    const [updatedRow] = await this.db
+      .update(appointments)
+      .set({
+        status: "cancelled",
+      })
+      .where(and(eq(appointments.tenantId, tenantId), eq(appointments.id, id)))
+      .returning();
+
+    return updatedRow ? toAppointment(updatedRow) : undefined;
   }
 }

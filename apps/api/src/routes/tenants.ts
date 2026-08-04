@@ -31,10 +31,10 @@ export function registerTenantRoutes(
       return reply.code(201).send(tenant);
     } catch (error) {
       if (error instanceof DuplicateTenantSlugError) {
-        return reply.code(409).send({ error: error.message });
+        return reply.code(409).send({ error: (error as Error).message });
       }
       if (error instanceof Error) {
-        return reply.code(400).send({ error: error.message });
+        return reply.code(400).send({ error: (error as Error).message });
       }
       throw error;
     }

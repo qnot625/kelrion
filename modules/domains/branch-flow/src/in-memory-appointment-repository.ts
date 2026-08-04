@@ -18,4 +18,36 @@ export class InMemoryAppointmentRepository implements AppointmentRepository {
       .filter((appointment) => appointment.tenantId === tenantId)
       .sort((a, b) => a.startAt.getTime() - b.startAt.getTime());
   }
+
+  async listByBranchAndDateRange(tenantId: string, branchId: string, startAt: Date, endAt: Date): Promise<Appointment[]> {
+    return [...this.byId.values()].filter((appointment) => 
+      appointment.tenantId === tenantId && 
+      appointment.branchId === branchId && 
+      appointment.endAt.getTime() > startAt.getTime() && 
+      appointment.startAt.getTime() < endAt.getTime()
+    );
+  }
+
+  async reschedule(tenantId: string, id: string, newStartAt: Date, newEndAt: Date): Promise<Appointment | undefined> {
+    const appointment = await this.findById(tenantId, id);
+    if (!appointment) return undefined;
+    const updated: Appointment = {
+      ...appointment,
+      startAt: newStartAt,
+      endAt: newEndAt,
+    };
+    this.byId.set(id, updated);
+    return updated;
+  }
+
+  async cancel(tenantId: string, id: string): Promise<Appointment | undefined> {
+    const appointment = await this.findById(tenantId, id);
+    if (!appointment) return undefined;
+    const updated: Appointment = {
+      ...appointment,
+      status: "cancelled",
+    };
+    this.byId.set(id, updated);
+    return updated;
+  }
 }
