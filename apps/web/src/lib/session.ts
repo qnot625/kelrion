@@ -41,6 +41,10 @@ export function clearSession(): void {
   localStorage.removeItem(STORAGE_KEY);
 }
 
+export function getSession(): KlerionSession | null {
+  return loadSession();
+}
+
 export function decodeTokenRoles(token: string): string[] {
   try {
     const payloadSegment = token.split(".")[1];

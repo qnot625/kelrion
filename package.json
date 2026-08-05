@@ -5,6 +5,7 @@
   "type": "module",
   "workspaces": [
     "apps/api",
+    "apps/web",
     "packages/*",
     "modules/platform/*",
     "modules/domains/*"
@@ -19,10 +20,14 @@
     "lint": "eslint ."
   },
   "devDependencies": {
+    "@adminops/tsconfig": "workspace:*",
     "@types/node": "^24.0.0",
     "eslint": "^9.15.0",
     "typescript": "^5.7.2",
     "typescript-eslint": "^8.18.0",
     "tsx": "^4.19.2"
+  },
+  "dependencies": {
+    "zod": "^4.4.3"
   }
 }

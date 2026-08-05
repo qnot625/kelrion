@@ -4,12 +4,47 @@ export type Permission =
   | "appointments:book"
   | "appointments:manage"
   | "appointments:view"
-  | "tenant:manage";
+  | "tenant:manage"
+  | "employees:create"
+  | "employees:read"
+  | "employees:update"
+  | "employees:delete"
+  | "employees:manage_hierarchy"
+  | "attendance:clock"
+  | "attendance:read"
+  | "attendance:sync"
+  | "attendance:manage";
 
 const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
-  owner: ["appointments:book", "appointments:manage", "appointments:view", "tenant:manage"],
-  staff: ["appointments:book", "appointments:manage", "appointments:view"],
-  member: ["appointments:book"],
+  owner: [
+    "appointments:book",
+    "appointments:manage",
+    "appointments:view",
+    "tenant:manage",
+    "employees:create",
+    "employees:read",
+    "employees:update",
+    "employees:delete",
+    "employees:manage_hierarchy",
+    "attendance:clock",
+    "attendance:read",
+    "attendance:sync",
+    "attendance:manage",
+  ],
+  staff: [
+    "appointments:book",
+    "appointments:manage",
+    "appointments:view",
+    "employees:create",
+    "employees:read",
+    "employees:update",
+    "employees:manage_hierarchy",
+    "attendance:clock",
+    "attendance:read",
+    "attendance:sync",
+    "attendance:manage",
+  ],
+  member: ["appointments:book", "employees:read", "attendance:clock", "attendance:read"],
 };
 
 function isKnownRole(role: string): role is Role {

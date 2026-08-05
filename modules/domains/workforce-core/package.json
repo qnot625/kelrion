@@ -1,0 +1,13 @@
+{
+  "name": "@adminops/workforce-core",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": "./src/index.ts",
+  "scripts": {
+    "test": "node --import tsx --test tests/contracts.test.ts tests/events.test.ts tests/employee.test.ts tests/hierarchy.test.ts tests/employee-service.test.ts tests/attendance.test.ts tests/idempotency.test.ts"
+  },
+  "dependencies": {
+    "zod": "^3.24.1"
+  }
+}

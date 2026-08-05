@@ -5,16 +5,17 @@
   "type": "module",
   "exports": "./src/index.ts",
   "scripts": {
-    "test": "node --import tsx --test tests/repositories.test.ts"
+    "test": "node --import tsx --test tests/repositories.test.ts tests/workforce-schema.test.ts tests/postgres-employee-repository.test.ts tests/postgres-attendance-repository.test.ts"
   },
   "dependencies": {
-    "@adminops/audit": "*",
-    "@adminops/branch-flow": "*",
-    "@adminops/identity": "*",
-    "@adminops/tenancy": "*",
-    "drizzle-orm": "^0.45.2",
-    "pg": "^8.13.1"
-  },
+  "@adminops/audit": "workspace:*",
+  "@adminops/branch-flow": "workspace:*",
+  "@adminops/identity": "workspace:*",
+  "@adminops/tenancy": "workspace:*",
+  "@adminops/workforce-core": "workspace:*",
+  "drizzle-orm": "^0.45.2",
+  "pg": "^8.13.1"
+},
   "devDependencies": {
     "@electric-sql/pglite": "^0.2.15",
     "@types/pg": "^8.11.10"

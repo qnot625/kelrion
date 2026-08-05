@@ -38,6 +38,143 @@ export interface ApiUser {
   readonly createdAt: string;
 }
 
+export interface ApiEmployee {
+  readonly id: string;
+  readonly tenantId: string;
+  readonly employeeNumber: string;
+  readonly firstName: string;
+  readonly lastName: string;
+  readonly email: string;
+  readonly phone?: string | null;
+  readonly departmentId?: string | null;
+  readonly positionId?: string | null;
+  readonly managerId?: string | null;
+  readonly branchId?: string | null;
+  readonly employmentType: "full_time" | "part_time" | "contract" | "intern" | "temporary";
+  readonly employmentStatus: "active" | "on_leave" | "terminated" | "suspended";
+  readonly hireDate: string;
+  readonly terminationDate?: string | null;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}
+
+export interface ApiEmployeeListResponse {
+  readonly data: readonly ApiEmployee[];
+  readonly total: number;
+  readonly limit: number;
+  readonly offset: number;
+}
+
+export interface ApiAttendanceEvent {
+  readonly id: string;
+  readonly type: "clock_in" | "clock_out" | "break_start" | "break_end";
+  readonly timestamp: string;
+  readonly workDate: string;
+  readonly idempotencyKey: string;
+  readonly source?: string;
+}
+
+export interface ApiAttendanceRecord {
+  readonly id: string;
+  readonly tenantId: string;
+  readonly employeeId: string;
+  readonly workDate: string;
+  readonly status: "clocked_in" | "clocked_out" | "on_break";
+  readonly clockInTime?: string | null;
+  readonly clockOutTime?: string | null;
+  readonly totalWorkMinutes: number;
+  readonly totalBreakMinutes: number;
+  readonly events: readonly ApiAttendanceEvent[];
+}
+
+export interface ApiAttendanceSummary {
+  readonly employeeId: string;
+  readonly workDate: string;
+  readonly status: "clocked_in" | "clocked_out" | "on_break";
+  readonly clockInTime?: string | null;
+  readonly clockOutTime?: string | null;
+  readonly totalWorkMinutes: number;
+  readonly totalBreakMinutes: number;
+}
+
+export interface ClockActionRequest {
+  readonly employeeId: string;
+  readonly workDate?: string;
+  readonly timestamp?: string;
+  readonly idempotencyKey?: string;
+  readonly source?: string;
+  readonly location?: { latitude: number; longitude: number; accuracy?: number } | null;
+  readonly notes?: string;
+}
+
+export interface ClockActionResponse {
+  readonly message: string;
+  readonly record: ApiAttendanceRecord;
+  readonly summary: ApiAttendanceSummary;
+}
+
+export interface ApiAttendanceCorrection {
+  readonly id: string;
+  readonly tenantId: string;
+  readonly employeeId: string;
+  readonly targetEventId?: string | null;
+  readonly requestedEventType: "clock_in" | "clock_out" | "break_start" | "break_end";
+  readonly requestedTimestamp: string;
+  readonly reason: string;
+  readonly status: "pending" | "approved" | "rejected";
+  readonly reviewedByUserId?: string | null;
+  readonly reviewedAt?: string | null;
+  readonly reviewNotes?: string | null;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}
+
+export interface ListCorrectionsParams {
+  employeeId?: string;
+  status?: "pending" | "approved" | "rejected";
+  limit?: number;
+  offset?: number;
+}
+
+export interface ListCorrectionsResponse {
+  readonly corrections: readonly ApiAttendanceCorrection[];
+  readonly total: number;
+  readonly limit: number;
+  readonly offset: number;
+}
+
+export interface SyncAttendanceBatchPayload {
+  readonly batchId?: string;
+  readonly submittedAt?: string;
+  readonly deviceId?: string;
+  readonly events: readonly {
+    readonly id: string;
+    readonly eventId: string;
+    readonly tenantId: string;
+    readonly employeeId: string;
+    readonly eventType: "clock_in" | "clock_out" | "break_start" | "break_end";
+    readonly timestamp: string;
+    readonly workDate: string;
+    readonly idempotencyKey: string;
+    readonly source: "web";
+    readonly location?: { latitude: number; longitude: number; accuracy?: number } | null;
+    readonly notes?: string;
+  }[];
+}
+
+export interface SyncAttendanceBatchResult {
+  readonly batchId: string;
+  readonly totalSubmitted: number;
+  readonly processedCount: number;
+  readonly duplicateCount: number;
+  readonly rejectedCount: number;
+  readonly results: readonly {
+    readonly id: string;
+    readonly status: "processed" | "duplicate" | "rejected";
+    readonly error?: string;
+  }[];
+}
+
 export interface ApiAppointment {
   readonly id: string;
   readonly tenantId: string;
@@ -79,7 +216,7 @@ function normalizeBaseUrl(value: string): string {
 export class KlerionApi {
   private readonly baseUrl: string;
 
-  constructor(baseUrl = import.meta.env.VITE_API_BASE_URL || DEFAULT_API_BASE_URL) {
+  constructor(baseUrl = import.meta.env?.VITE_API_BASE_URL || DEFAULT_API_BASE_URL) {
     this.baseUrl = normalizeBaseUrl(baseUrl);
   }
 
@@ -127,6 +264,103 @@ export class KlerionApi {
     return this.authorizedRequest<ApiUser[]>(session, "/users");
   }
 
+  async listEmployees(
+    session: KlerionSession,
+    params: {
+      search?: string;
+      departmentId?: string;
+      employmentStatus?: string;
+      limit?: number;
+      offset?: number;
+    } = {},
+  ): Promise<ApiEmployeeListResponse> {
+    const query = new URLSearchParams();
+    if (params.search) query.set("search", params.search);
+    if (params.departmentId) query.set("departmentId", params.departmentId);
+    if (params.employmentStatus) query.set("employmentStatus", params.employmentStatus);
+    if (params.limit !== undefined) query.set("limit", String(params.limit));
+    if (params.offset !== undefined) query.set("offset", String(params.offset));
+    const queryString = query.toString();
+    const path = `/employees${queryString ? `?${queryString}` : ""}`;
+    return this.authorizedRequest<ApiEmployeeListResponse>(session, path);
+  }
+
+  async getEmployee(session: KlerionSession, id: string): Promise<ApiEmployee> {
+    return this.authorizedRequest<ApiEmployee>(session, `/employees/${id}`);
+  }
+
+  async createEmployee(
+    session: KlerionSession,
+    payload: {
+      employeeNumber: string;
+      firstName: string;
+      lastName: string;
+      email: string;
+      phone?: string;
+      departmentId?: string;
+      positionId?: string;
+      managerId?: string;
+      branchId?: string;
+      employmentType: string;
+      hireDate: string;
+    },
+  ): Promise<ApiEmployee> {
+    return this.authorizedRequest<ApiEmployee>(session, "/employees", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async updateEmployee(
+    session: KlerionSession,
+    id: string,
+    payload: {
+      firstName?: string;
+      lastName?: string;
+      email?: string;
+      phone?: string;
+      departmentId?: string;
+      positionId?: string;
+      branchId?: string;
+      employmentType?: string;
+    },
+  ): Promise<ApiEmployee> {
+    return this.authorizedRequest<ApiEmployee>(session, `/employees/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async assignManager(
+    session: KlerionSession,
+    id: string,
+    managerId: string | null,
+  ): Promise<ApiEmployee> {
+    return this.authorizedRequest<ApiEmployee>(session, `/employees/${id}/manager`, {
+      method: "PATCH",
+      body: JSON.stringify({ managerId }),
+    });
+  }
+
+  async updateEmployeeStatus(
+    session: KlerionSession,
+    id: string,
+    action: "suspend" | "reactivate" | "terminate",
+    reason?: string,
+    terminationDate?: string,
+  ): Promise<ApiEmployee> {
+    return this.authorizedRequest<ApiEmployee>(session, `/employees/${id}/status`, {
+      method: "PATCH",
+      body: JSON.stringify({ action, reason, terminationDate }),
+    });
+  }
+
+  async deleteEmployee(session: KlerionSession, id: string): Promise<{ success: boolean; id: string }> {
+    return this.authorizedRequest<{ success: boolean; id: string }>(session, `/employees/${id}`, {
+      method: "DELETE",
+    });
+  }
+
   async updateUserRoles(
     session: KlerionSession,
     userId: string,
@@ -152,6 +386,138 @@ export class KlerionApi {
 
   async listAuditEvents(session: KlerionSession): Promise<ApiAuditEvent[]> {
     return this.authorizedRequest<ApiAuditEvent[]>(session, "/audit-events");
+  }
+
+  // Time & Attendance Endpoints
+  async clockIn(session: KlerionSession, payload: ClockActionRequest): Promise<ClockActionResponse> {
+    return this.authorizedRequest<ClockActionResponse>(session, "/attendance/clock-in", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async clockOut(session: KlerionSession, payload: ClockActionRequest): Promise<ClockActionResponse> {
+    return this.authorizedRequest<ClockActionResponse>(session, "/attendance/clock-out", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async startBreak(session: KlerionSession, payload: ClockActionRequest): Promise<ClockActionResponse> {
+    return this.authorizedRequest<ClockActionResponse>(session, "/attendance/break-start", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async endBreak(session: KlerionSession, payload: ClockActionRequest): Promise<ClockActionResponse> {
+    return this.authorizedRequest<ClockActionResponse>(session, "/attendance/break-end", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async getEmployeeAttendance(
+    session: KlerionSession,
+    employeeId: string,
+    workDate?: string
+  ): Promise<{ record: ApiAttendanceRecord | null; summary: ApiAttendanceSummary | null }> {
+    const query = workDate ? `?workDate=${encodeURIComponent(workDate)}` : "";
+    return this.authorizedRequest<{ record: ApiAttendanceRecord | null; summary: ApiAttendanceSummary | null }>(
+      session,
+      `/attendance/employee/${employeeId}${query}`
+    );
+  }
+
+  async syncAttendance(
+    session: KlerionSession,
+    payload: SyncAttendanceBatchPayload
+  ): Promise<SyncAttendanceBatchResult> {
+    return this.authorizedRequest<SyncAttendanceBatchResult>(session, "/attendance/sync", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async listAttendanceSummaries(
+    session: KlerionSession,
+    params: { startDate?: string; endDate?: string; employeeId?: string } = {}
+  ): Promise<{ summaries: ApiAttendanceSummary[]; count: number }> {
+    const queryParts: string[] = [];
+    if (params.startDate) queryParts.push(`startDate=${encodeURIComponent(params.startDate)}`);
+    if (params.endDate) queryParts.push(`endDate=${encodeURIComponent(params.endDate)}`);
+    if (params.employeeId) queryParts.push(`employeeId=${encodeURIComponent(params.employeeId)}`);
+    const query = queryParts.length > 0 ? `?${queryParts.join("&")}` : "";
+    return this.authorizedRequest<{ summaries: ApiAttendanceSummary[]; count: number }>(
+      session,
+      `/attendance/summary${query}`
+    );
+  }
+
+  async listAttendanceCorrections(
+    session: KlerionSession,
+    params: ListCorrectionsParams = {}
+  ): Promise<ListCorrectionsResponse> {
+    const queryParts: string[] = [];
+    if (params.employeeId) queryParts.push(`employeeId=${encodeURIComponent(params.employeeId)}`);
+    if (params.status) queryParts.push(`status=${encodeURIComponent(params.status)}`);
+    if (params.limit) queryParts.push(`limit=${params.limit}`);
+    if (params.offset) queryParts.push(`offset=${params.offset}`);
+    const query = queryParts.length > 0 ? `?${queryParts.join("&")}` : "";
+    return this.authorizedRequest<ListCorrectionsResponse>(
+      session,
+      `/attendance/corrections${query}`
+    );
+  }
+
+  async createAttendanceCorrection(
+    session: KlerionSession,
+    payload: {
+      employeeId: string;
+      targetEventId?: string;
+      requestedEventType: "clock_in" | "clock_out" | "break_start" | "break_end";
+      requestedTimestamp: string;
+      reason: string;
+    }
+  ): Promise<{ message: string; correction: ApiAttendanceCorrection }> {
+    return this.authorizedRequest<{ message: string; correction: ApiAttendanceCorrection }>(
+      session,
+      "/attendance/corrections",
+      {
+        method: "POST",
+        body: JSON.stringify(payload),
+      }
+    );
+  }
+
+  async approveAttendanceCorrection(
+    session: KlerionSession,
+    id: string,
+    reviewNotes?: string
+  ): Promise<{ message: string; correction: ApiAttendanceCorrection; attendanceRecord: ApiAttendanceRecord }> {
+    return this.authorizedRequest<{ message: string; correction: ApiAttendanceCorrection; attendanceRecord: ApiAttendanceRecord }>(
+      session,
+      `/attendance/corrections/${id}/approve`,
+      {
+        method: "POST",
+        body: JSON.stringify({ reviewNotes }),
+      }
+    );
+  }
+
+  async rejectAttendanceCorrection(
+    session: KlerionSession,
+    id: string,
+    reviewNotes?: string
+  ): Promise<{ message: string; correction: ApiAttendanceCorrection }> {
+    return this.authorizedRequest<{ message: string; correction: ApiAttendanceCorrection }>(
+      session,
+      `/attendance/corrections/${id}/reject`,
+      {
+        method: "POST",
+        body: JSON.stringify({ reviewNotes }),
+      }
+    );
   }
 
   private authorizedRequest<T>(

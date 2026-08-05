@@ -6,18 +6,20 @@
   "scripts": {
     "dev": "node --import tsx --watch src/index.ts",
     "start": "node --import tsx src/index.ts",
-    "test": "node --import tsx --test tests/health.test.ts tests/vertical-slice.test.ts tests/rbac.test.ts tests/audit.test.ts tests/user-roles.test.ts tests/postgres-integration.test.ts"
+    "test": "node --import tsx --test tests/health.test.ts tests/vertical-slice.test.ts tests/rbac.test.ts tests/audit.test.ts tests/user-roles.test.ts tests/postgres-integration.test.ts tests/employees.test.ts tests/attendance-routes.test.ts"
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.2.15",
-    "drizzle-orm": "^0.45.2"
+    "drizzle-orm": "^0.45.2",
+    "@adminops/tsconfig": "workspace:*"
   },
   "dependencies": {
-    "@adminops/audit": "*",
-    "@adminops/branch-flow": "*",
-    "@adminops/identity": "*",
-    "@adminops/persistence": "*",
-    "@adminops/tenancy": "*",
-    "fastify": "^5.1.0"
+  "@adminops/audit": "workspace:*",
+  "@adminops/branch-flow": "workspace:*",
+  "@adminops/identity": "workspace:*",
+  "@adminops/tenancy": "workspace:*",
+  "@adminops/workforce-core": "workspace:*",
+  "@adminops/persistence": "workspace:*",
+  "fastify": "^5.1.0"
   }
 }

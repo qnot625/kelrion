@@ -7,9 +7,24 @@ import {
   type AppointmentRepository,
 } from "@adminops/branch-flow";
 import {
+  EmployeeService,
+  InMemoryEmployeeRepository,
+  type EmployeeRepository,
+  AttendanceSyncEngine,
+  type AttendanceRecordStore,
+  type IdempotencyRegistryStore,
+  type AttendanceCorrectionRepository,
+  InMemoryAttendanceRecordStore,
+  InMemoryIdempotencyRegistry,
+  InMemoryAttendanceCorrectionRepository,
+} from "@adminops/workforce-core";
+import {
   connectPostgres,
   PostgresAppointmentRepository,
+  PostgresAttendanceRepository,
+  PostgresAttendanceCorrectionRepository,
   PostgresAuditLog,
+  PostgresEmployeeRepository,
   PostgresTenantRepository,
   PostgresUserRepository,
   runMigrations,
@@ -20,6 +35,11 @@ export interface AppContext {
   userRepository: UserRepository;
   authService: AuthService;
   appointmentService: AppointmentService;
+  employeeRepository: EmployeeRepository;
+  employeeService: EmployeeService;
+  attendanceRepository: AttendanceRecordStore;
+  attendanceSyncEngine: AttendanceSyncEngine;
+  attendanceCorrectionRepository: AttendanceCorrectionRepository;
   auditLog: AuditLog;
   close: () => Promise<void>;
 }
@@ -36,6 +56,10 @@ function assemble(
   tenantRepository: TenantRepository,
   userRepository: UserRepository,
   appointmentRepository: AppointmentRepository,
+  employeeRepository: EmployeeRepository,
+  attendanceRecordStore: AttendanceRecordStore,
+  idempotencyRegistryStore: IdempotencyRegistryStore,
+  attendanceCorrectionRepository: AttendanceCorrectionRepository,
   auditLog: AuditLog,
   close: () => Promise<void>,
 ): AppContext {
@@ -44,6 +68,14 @@ function assemble(
     userRepository,
     authService: new AuthService(userRepository, resolveTokenSecret()),
     appointmentService: new AppointmentService(appointmentRepository),
+    employeeRepository,
+    employeeService: new EmployeeService(employeeRepository, auditLog),
+    attendanceRepository: attendanceRecordStore,
+    attendanceSyncEngine: new AttendanceSyncEngine({
+      recordStore: attendanceRecordStore,
+      idempotencyRegistry: idempotencyRegistryStore,
+    }),
+    attendanceCorrectionRepository,
     auditLog,
     close,
   };
@@ -51,10 +83,16 @@ function assemble(
 
 /** In-memory wiring; state lives only for the life of the process. */
 export function createAppContext(): AppContext {
+  const recordStore = new InMemoryAttendanceRecordStore();
+  const idempotencyStore = new InMemoryIdempotencyRegistry();
   return assemble(
     new InMemoryTenantRepository(),
     new InMemoryUserRepository(),
     new InMemoryAppointmentRepository(),
+    new InMemoryEmployeeRepository(),
+    recordStore,
+    idempotencyStore,
+    new InMemoryAttendanceCorrectionRepository(),
     new InMemoryAuditLog(),
     async () => {},
   );
@@ -63,10 +101,15 @@ export function createAppContext(): AppContext {
 export async function createPostgresAppContext(connectionString: string): Promise<AppContext> {
   const { db, close } = connectPostgres(connectionString);
   await runMigrations(db);
+  const attendanceRepo = new PostgresAttendanceRepository(db);
   return assemble(
     new PostgresTenantRepository(db),
     new PostgresUserRepository(db),
     new PostgresAppointmentRepository(db),
+    new PostgresEmployeeRepository(db),
+    attendanceRepo,
+    attendanceRepo,
+    new PostgresAttendanceCorrectionRepository(db),
     new PostgresAuditLog(db),
     close,
   );

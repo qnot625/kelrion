@@ -2,13 +2,15 @@
   "extends": "@adminops/tsconfig/base.json",
   "compilerOptions": {
     "rootDir": "src",
-    "outDir": "dist"
+    "outDir": "dist",
+    "composite": true
   },
   "include": ["src"],
   "references": [
     { "path": "../../modules/platform/tenancy" },
     { "path": "../../modules/platform/identity" },
     { "path": "../../modules/platform/audit" },
-    { "path": "../../modules/domains/branch-flow" }
+    { "path": "../../modules/domains/branch-flow" },
+    { "path": "../../modules/domains/workforce-core" }
   ]
 }

@@ -3,9 +3,11 @@ import { Shell, type RouteKey } from "./components/Shell";
 import { klerionApi, type AuthenticationRequest } from "./lib/api";
 import { clearSession, loadSession, saveSession, type KlerionSession } from "./lib/session";
 import { AppointmentsView } from "./views/AppointmentsView";
+import { AttendanceTimesheetView } from "./views/AttendanceTimesheetView";
 import { AuditView } from "./views/AuditView";
 import { AuthView } from "./views/AuthView";
 import { DashboardView } from "./views/DashboardView";
+import { EmployeeDirectoryView } from "./views/EmployeeDirectoryView";
 import { FoundationView } from "./views/FoundationView";
 import { OnboardingView } from "./views/OnboardingView";
 import { QueueView } from "./views/QueueView";
@@ -39,9 +41,11 @@ export default function App() {
   if (stage === "onboarding") return <OnboardingView onComplete={() => setStage("app")} />;
 
   const views: Record<RouteKey, React.ReactNode> = {
-    dashboard: <DashboardView />,
+    dashboard: <DashboardView session={session} />,
     appointments: <AppointmentsView session={session} />,
     queue: <QueueView />,
+    employees: <EmployeeDirectoryView session={session} />,
+    timesheets: <AttendanceTimesheetView session={session} />,
     users: <UsersView session={session} />,
     recruitment: <RecruitmentView />,
     audit: <AuditView session={session} />,

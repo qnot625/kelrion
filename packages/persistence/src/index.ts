@@ -4,4 +4,7 @@ export * from "./connect.js";
 export * from "./postgres-tenant-repository.js";
 export * from "./postgres-user-repository.js";
 export * from "./postgres-appointment-repository.js";
+export * from "./postgres-employee-repository.js";
+export * from "./postgres-attendance-repository.js";
+export * from "./postgres-attendance-correction-repository.js";
 export * from "./postgres-audit-log.js";
