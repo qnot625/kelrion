@@ -1,0 +1,26 @@
+name: Export Main Snapshot
+
+on:
+  push:
+    branches:
+      - export/main-snapshot
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create source archive
+        run: tar --exclude=.git -czf /tmp/main-snapshot.tar.gz .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: main-snapshot
+          path: /tmp/main-snapshot.tar.gz
+          if-no-files-found: error
+          retention-days: 1
