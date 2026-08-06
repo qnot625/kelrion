@@ -15,6 +15,13 @@ import {
   runMigrations,
 } from "@adminops/persistence";
 import {
+  CustomerCaseService,
+  ExecutiveSummaryService,
+  InMemoryCustomerIntelligenceRepository,
+  PostgresCustomerIntelligenceRepository,
+  type CustomerIntelligenceRepository,
+} from "./domains/customer-intelligence/index.js";
+import {
   InMemoryWorkforceLifecycleRepository,
   PostgresWorkforceLifecycleRepository,
   WorkforceLifecycleService,
@@ -27,6 +34,8 @@ export interface AppContext {
   authService: AuthService;
   appointmentService: AppointmentService;
   workforceLifecycleService: WorkforceLifecycleService;
+  customerCaseService: CustomerCaseService;
+  executiveSummaryService: ExecutiveSummaryService;
   auditLog: AuditLog;
   close: () => Promise<void>;
 }
@@ -44,15 +53,19 @@ function assemble(
   userRepository: UserRepository,
   appointmentRepository: AppointmentRepository,
   workforceLifecycleRepository: WorkforceLifecycleRepository,
+  customerIntelligenceRepository: CustomerIntelligenceRepository,
   auditLog: AuditLog,
   close: () => Promise<void>,
 ): AppContext {
+  const appointmentService = new AppointmentService(appointmentRepository);
   return {
     tenantRepository,
     userRepository,
     authService: new AuthService(userRepository, resolveTokenSecret()),
-    appointmentService: new AppointmentService(appointmentRepository),
+    appointmentService,
     workforceLifecycleService: new WorkforceLifecycleService(workforceLifecycleRepository),
+    customerCaseService: new CustomerCaseService(customerIntelligenceRepository),
+    executiveSummaryService: new ExecutiveSummaryService(customerIntelligenceRepository, appointmentService),
     auditLog,
     close,
   };
@@ -65,6 +78,7 @@ export function createAppContext(): AppContext {
     new InMemoryUserRepository(),
     new InMemoryAppointmentRepository(),
     new InMemoryWorkforceLifecycleRepository(),
+    new InMemoryCustomerIntelligenceRepository(),
     new InMemoryAuditLog(),
     async () => {},
   );
@@ -78,6 +92,7 @@ export async function createPostgresAppContext(connectionString: string): Promis
     new PostgresUserRepository(db),
     new PostgresAppointmentRepository(db),
     new PostgresWorkforceLifecycleRepository(db),
+    new PostgresCustomerIntelligenceRepository(db),
     new PostgresAuditLog(db),
     close,
   );

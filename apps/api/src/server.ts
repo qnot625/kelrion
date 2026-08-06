@@ -5,6 +5,7 @@ import { registerTenantContext } from "./plugins/tenant-context.js";
 import { registerAppointmentRoutes } from "./routes/appointments.js";
 import { registerAuditRoutes } from "./routes/audit.js";
 import { registerAuthRoutes } from "./routes/auth.js";
+import { registerCustomerIntelligenceRoutes } from "./routes/customer-intelligence.js";
 import { registerTenantRoutes } from "./routes/tenants.js";
 import { registerUserRoutes } from "./routes/users.js";
 import { registerWorkforceLifecycleRoutes } from "./routes/workforce-lifecycle.js";
@@ -28,6 +29,12 @@ export function buildServer(context: AppContext): FastifyInstance {
       registerWorkforceLifecycleRoutes(
         protectedScope,
         context.workforceLifecycleService,
+        context.auditLog,
+      );
+      registerCustomerIntelligenceRoutes(
+        protectedScope,
+        context.customerCaseService,
+        context.executiveSummaryService,
         context.auditLog,
       );
     });

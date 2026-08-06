@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Shell, type RouteKey } from "./components/Shell";
+import { CasesView } from "./features/customer-intelligence/CasesView";
+import { ExecutiveView } from "./features/customer-intelligence/ExecutiveView";
 import { klerionApi, type AuthenticationRequest } from "./lib/api";
 import { clearSession, loadSession, saveSession, type KlerionSession } from "./lib/session";
 import { AppointmentsView } from "./views/AppointmentsView";
@@ -47,6 +49,8 @@ export default function App() {
     users: <UsersView session={session} />,
     leave: <LeaveView session={session} />,
     lifecycle: <LifecycleView session={session} />,
+    cases: <CasesView session={session} />,
+    executive: <ExecutiveView session={session} />,
     recruitment: <RecruitmentView />,
     audit: <AuditView session={session} />,
     reports: <FoundationView title="Reports and analytics" />,

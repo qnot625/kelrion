@@ -8,7 +8,10 @@ export type Permission =
   | "leave:request"
   | "leave:approve"
   | "lifecycle:view"
-  | "lifecycle:manage";
+  | "lifecycle:manage"
+  | "cases:create"
+  | "cases:manage"
+  | "analytics:view";
 
 const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
   owner: [
@@ -20,6 +23,9 @@ const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     "leave:approve",
     "lifecycle:view",
     "lifecycle:manage",
+    "cases:create",
+    "cases:manage",
+    "analytics:view",
   ],
   staff: [
     "appointments:book",
@@ -29,8 +35,16 @@ const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     "leave:approve",
     "lifecycle:view",
     "lifecycle:manage",
+    "cases:create",
+    "cases:manage",
+    "analytics:view",
   ],
-  member: ["appointments:book", "leave:request", "lifecycle:view"],
+  member: [
+    "appointments:book",
+    "leave:request",
+    "lifecycle:view",
+    "cases:create",
+  ],
 };
 
 function isKnownRole(role: string): role is Role {

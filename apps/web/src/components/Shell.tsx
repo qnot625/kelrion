@@ -1,14 +1,25 @@
 import {
-  BarChart3, Bell, BriefcaseBusiness, CalendarClock, CalendarDays, ChevronDown, Command,
-  LayoutDashboard, Menu, Plus, Search, ShieldCheck, TicketCheck, UserCog, UserRoundCheck, X,
-  type LucideIcon,
+  BarChart3, Bell, BriefcaseBusiness, CalendarClock, CalendarDays, ChevronDown, Command, Gauge,
+  LayoutDashboard, Menu, MessageSquareWarning, Plus, Search, ShieldCheck, TicketCheck, UserCog,
+  UserRoundCheck, X, type LucideIcon,
 } from "lucide-react";
 import { useMemo, useState, type ReactNode } from "react";
 import type { KlerionSession } from "../lib/session";
 import { displayNameFromEmail } from "../lib/session";
 import { Brand } from "./Brand";
 
-export type RouteKey = "dashboard" | "appointments" | "queue" | "users" | "leave" | "lifecycle" | "recruitment" | "audit" | "reports";
+export type RouteKey =
+  | "dashboard"
+  | "appointments"
+  | "queue"
+  | "users"
+  | "leave"
+  | "lifecycle"
+  | "cases"
+  | "executive"
+  | "recruitment"
+  | "audit"
+  | "reports";
 
 const nav: Array<{ key: RouteKey; label: string; icon: LucideIcon; badge?: string }> = [
   { key: "dashboard", label: "Overview", icon: LayoutDashboard },
@@ -17,6 +28,8 @@ const nav: Array<{ key: RouteKey; label: string; icon: LucideIcon; badge?: strin
   { key: "users", label: "Users & roles", icon: UserCog },
   { key: "leave", label: "Leave & availability", icon: CalendarClock },
   { key: "lifecycle", label: "On/Offboarding", icon: UserRoundCheck },
+  { key: "cases", label: "Cases & complaints", icon: MessageSquareWarning },
+  { key: "executive", label: "Executive centre", icon: Gauge },
   { key: "recruitment", label: "Recruitment", icon: BriefcaseBusiness, badge: "12" },
   { key: "audit", label: "Audit trail", icon: ShieldCheck },
   { key: "reports", label: "Reports", icon: BarChart3 },
