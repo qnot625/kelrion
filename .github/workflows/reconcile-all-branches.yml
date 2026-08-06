@@ -3,12 +3,15 @@ name: Reconcile all branch histories
 on:
   push:
     branches: [main, ops/merge-all-branches]
+  pull_request:
+    branches: [main]
 
 permissions:
   contents: write
 
 jobs:
   reconcile:
+    if: github.event_name == 'push' || github.head_ref == 'ops/reconcile-trigger'
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository history
@@ -36,7 +39,7 @@ jobs:
             branch="${remote_ref#origin/}"
 
             case "$branch" in
-              main|ops/merge-all-branches|integration/all-branches)
+              main|ops/merge-all-branches|ops/reconcile-trigger|integration/all-branches)
                 continue
                 ;;
             esac
