@@ -1,0 +1,13 @@
+{
+  "files": [],
+  "references": [
+    { "path": "modules/platform/tenancy" },
+    { "path": "modules/platform/identity" },
+    { "path": "modules/platform/audit" },
+    { "path": "modules/platform/forms" },
+    { "path": "modules/domains/branch-flow" },
+    { "path": "packages/persistence" },
+    { "path": "apps/api" },
+    { "path": "apps/web" }
+  ]
+}

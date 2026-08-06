@@ -1,0 +1,15 @@
+{
+  "name": "@adminops/internal-services",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@adminops/workflow": "*"
+  },
+  "scripts": {
+    "test": "node --import tsx --test src/approval/__tests__/approval.test.ts"
+  }
+}

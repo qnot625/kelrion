@@ -1,0 +1,8 @@
+{
+  "name": "Klerion AdminOps OS",
+  "description": "Administrative operations platform with modular monolith architecture",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

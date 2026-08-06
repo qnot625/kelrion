@@ -1,0 +1,31 @@
+{
+  "name": "@adminops/api",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./server": "./src/server.ts",
+    "./context": "./src/context.ts"
+  },
+  "scripts": {
+    "dev": "node --import tsx --watch src/index.ts",
+    "start": "node --import tsx src/index.ts",
+    "test": "node --import tsx --test src/routes/__tests__/forms.test.ts src/routes/__tests__/workflows.test.ts src/routes/__tests__/approvals.test.ts src/routes/__tests__/service-desk.test.ts src/routes/__tests__/e2e-integration.test.ts src/routes/__tests__/security.test.ts"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.2.15",
+    "drizzle-orm": "^0.45.2"
+  },
+  "dependencies": {
+    "@adminops/audit": "*",
+    "@adminops/branch-flow": "*",
+    "@adminops/forms": "*",
+    "@adminops/identity": "*",
+    "@adminops/persistence": "*",
+    "@adminops/security": "*",
+    "@adminops/tenancy": "*",
+    "@adminops/workflow": "*",
+    "fastify": "^5.1.0"
+  }
+}

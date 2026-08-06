@@ -1,0 +1,40 @@
+{
+  "name": "adminops-os",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "apps/api",
+    "apps/web",
+    "packages/*",
+    "modules/platform/*",
+    "modules/domains/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace=apps/web",
+    "dev:api": "npm run dev --workspace=apps/api",
+    "dev:web": "npm run dev --workspace=apps/web",
+    "build": "npm run build --workspace=apps/web && mkdir -p dist && cp -r apps/web/dist/* dist/",
+    "build:web": "npm run build --workspace=apps/web",
+    "typecheck": "tsc -b",
+    "test": "npm run test --workspaces --if-present",
+    "lint": "eslint ."
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "eslint": "^9.15.0",
+    "typescript": "^5.7.2",
+    "typescript-eslint": "^8.18.0",
+    "tsx": "^4.19.2"
+  },
+  "dependencies": {
+    "@fastify/cookie": "^11.1.2",
+    "@fastify/helmet": "^13.1.0",
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/jsonwebtoken": "^9.0.10",
+    "fastify-plugin": "^6.0.0",
+    "jsonwebtoken": "^9.0.3",
+    "tailwindcss": "^4.3.3",
+    "zod": "^4.4.3"
+  }
+}

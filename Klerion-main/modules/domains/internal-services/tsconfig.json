@@ -1,0 +1,11 @@
+{
+  "extends": "../../../packages/tsconfig/base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist",
+    "paths": {
+      "@adminops/workflow": ["../../platform/workflow/src/index.ts"]
+    }
+  },
+  "include": ["src/**/*"]
+}
