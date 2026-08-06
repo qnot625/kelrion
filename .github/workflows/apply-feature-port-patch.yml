@@ -22,7 +22,7 @@ jobs:
       - name: Detect staged patch
         id: state
         run: |
-          if [ -f .port-fix/patch.diff ] || [ -d .port-patch-v2 ] || [ -d .port-patch ]; then
+          if [ -f .port-fix/patch.diff ] || [ -f .port-patch/chunks.sha256 ]; then
             echo "apply=true" >> "$GITHUB_OUTPUT"
           else
             echo "apply=false" >> "$GITHUB_OUTPUT"
@@ -34,21 +34,19 @@ jobs:
           set -euo pipefail
           if [ -f .port-fix/patch.diff ]; then
             cp .port-fix/patch.diff /tmp/feature-port.patch
-          elif [ -d .port-patch-v2 ]; then
-            cat .port-patch-v2/chunk_* > /tmp/feature-port.patch.gz.b64
-            base64 --decode /tmp/feature-port.patch.gz.b64 > /tmp/feature-port.patch.gz
-            gzip --test /tmp/feature-port.patch.gz
-            gzip --decompress --stdout /tmp/feature-port.patch.gz > /tmp/feature-port.patch
           else
-            cat .port-patch/part_* > /tmp/feature-port.patch.gz.b64
+            sha256sum --check --strict .port-patch/chunks.sha256
+            cat .port-patch/chunk_* > /tmp/feature-port.patch.gz.b64
+            test "$(wc -c < /tmp/feature-port.patch.gz.b64)" -eq "$(cat .port-patch/base64-length.txt)"
             base64 --decode /tmp/feature-port.patch.gz.b64 > /tmp/feature-port.patch.gz
+            echo "$(cat .port-patch/archive.sha256)  /tmp/feature-port.patch.gz" | sha256sum --check --strict
             gzip --test /tmp/feature-port.patch.gz
             gzip --decompress --stdout /tmp/feature-port.patch.gz > /tmp/feature-port.patch
           fi
           test -s /tmp/feature-port.patch
           git apply --check --binary /tmp/feature-port.patch
           git apply --index --binary /tmp/feature-port.patch
-          rm -rf .port-fix .port-patch .port-patch-v2
+          rm -rf .port-fix .port-patch
           git add -A
 
       - name: Commit applied feature port
