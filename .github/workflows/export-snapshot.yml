@@ -1,0 +1,23 @@
+name: Export Developer 1 Snapshot
+
+on:
+  push:
+    branches:
+      - export/developer-1
+
+permissions:
+  contents: read
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create source archive
+        run: tar --exclude=.git -czf /tmp/developer-1.tar.gz .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: developer-1-snapshot
+          path: /tmp/developer-1.tar.gz
+          if-no-files-found: error
+          retention-days: 1
