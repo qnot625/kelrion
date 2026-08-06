@@ -10,12 +10,18 @@ import { InMemoryTenantRepository, type TenantRepository } from "@adminops/tenan
 import {
   AppointmentService,
   InMemoryAppointmentRepository,
+  InMemoryBranchRepository,
+  InMemoryServiceRepository,
   type AppointmentRepository,
+  type BranchRepository,
+  type ServiceRepository,
 } from "@adminops/branch-flow";
 import {
   connectPostgres,
   PostgresAppointmentRepository,
   PostgresAuditLog,
+  PostgresBranchRepository,
+  PostgresServiceRepository,
   PostgresControlPlaneRepository,
   PostgresTenantRepository,
   PostgresUserRepository,
@@ -43,6 +49,8 @@ export interface AppContext {
   platformAdminAuthService: PlatformAdminAuthService;
   controlPlaneService: ControlPlaneService;
   appointmentService: AppointmentService;
+  branchRepository: BranchRepository;
+  serviceRepository: ServiceRepository;
   workforceLifecycleService: WorkforceLifecycleService;
   customerCaseService: CustomerCaseService;
   executiveSummaryService: ExecutiveSummaryService;
@@ -62,6 +70,8 @@ function assemble(
   tenantRepository: TenantRepository,
   userRepository: UserRepository,
   appointmentRepository: AppointmentRepository,
+  branchRepository: BranchRepository,
+  serviceRepository: ServiceRepository,
   workforceLifecycleRepository: WorkforceLifecycleRepository,
   customerIntelligenceRepository: CustomerIntelligenceRepository,
   controlPlaneRepository: ControlPlaneRepository,
@@ -82,6 +92,8 @@ function assemble(
     ),
     controlPlaneService,
     appointmentService,
+    branchRepository,
+    serviceRepository,
     workforceLifecycleService: new WorkforceLifecycleService(workforceLifecycleRepository),
     customerCaseService: new CustomerCaseService(customerIntelligenceRepository),
     executiveSummaryService: new ExecutiveSummaryService(customerIntelligenceRepository, appointmentService),
@@ -96,6 +108,8 @@ export function createAppContext(): AppContext {
     new InMemoryTenantRepository(),
     new InMemoryUserRepository(),
     new InMemoryAppointmentRepository(),
+    new InMemoryBranchRepository(),
+    new InMemoryServiceRepository(),
     new InMemoryWorkforceLifecycleRepository(),
     new InMemoryCustomerIntelligenceRepository(),
     new InMemoryControlPlaneRepository(),
@@ -111,6 +125,8 @@ export async function createPostgresAppContext(connectionString: string): Promis
     new PostgresTenantRepository(db),
     new PostgresUserRepository(db),
     new PostgresAppointmentRepository(db),
+    new PostgresBranchRepository(db),
+    new PostgresServiceRepository(db),
     new PostgresWorkforceLifecycleRepository(db),
     new PostgresCustomerIntelligenceRepository(db),
     new PostgresControlPlaneRepository(db),

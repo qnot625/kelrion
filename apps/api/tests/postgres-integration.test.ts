@@ -9,6 +9,8 @@ import {
   PostgresAppointmentRepository,
   PostgresAuditLog,
   PostgresControlPlaneRepository,
+  PostgresBranchRepository,
+  PostgresServiceRepository,
   PostgresTenantRepository,
   PostgresUserRepository,
   runMigrations,
@@ -53,6 +55,8 @@ async function postgresBackedContext(): Promise<AppContext> {
       userRepository,
     ),
     appointmentService,
+    branchRepository: new PostgresBranchRepository(db),
+    serviceRepository: new PostgresServiceRepository(db),
     workforceLifecycleService: new WorkforceLifecycleService(
       new PostgresWorkforceLifecycleRepository(db),
     ),

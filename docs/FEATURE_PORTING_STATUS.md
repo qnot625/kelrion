@@ -4,8 +4,8 @@ This document records the controlled integration sequence for preserved feature 
 
 ## Integration order
 
-1. Platform control plane and organisation entitlements — final CI validation
-2. Branch, service, discovery and scheduling capabilities — pending
+1. Platform control plane and organisation entitlements — completed
+2. Branch, service, discovery and scheduling capabilities — completed
 3. Employee records and attendance — pending
 4. Workforce lifecycle reconciliation — pending
 5. Forms platform — pending

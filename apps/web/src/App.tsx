@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { availableRoutes, Shell, type RouteKey } from "./components/Shell";
+import { BranchesView } from "./features/branches/BranchesView";
 import { CasesView } from "./features/customer-intelligence/CasesView";
 import { ExecutiveView } from "./features/customer-intelligence/ExecutiveView";
 import { klerionApi, type AuthenticationRequest } from "./lib/api";
@@ -100,7 +101,7 @@ export default function App() {
 
   const views: Record<RouteKey, React.ReactNode> = {
     dashboard: <DashboardView session={session} onOpen={setRoute} />,
-    branches: <FoundationView title="Branches, services and capacity routing" />,
+    branches: <BranchesView session={session} />,
     appointments: <AppointmentsView session={session} />,
     queue: <QueueView />,
     notifications: <FoundationView title="Omnichannel notifications" />,

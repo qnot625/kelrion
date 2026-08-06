@@ -120,6 +120,80 @@ export interface ApiAppointment {
   readonly createdAt: string;
 }
 
+
+export interface ApiBranch {
+  readonly id: string;
+  readonly tenantId: string;
+  readonly slug: string;
+  readonly name: string;
+  readonly status: "active" | "inactive";
+  readonly address: string;
+  readonly latitude: number;
+  readonly longitude: number;
+}
+
+export interface ApiOperatingWindow {
+  readonly dayOfWeek: number;
+  readonly openMinutes: number;
+  readonly closeMinutes: number;
+}
+
+export interface ApiHoliday {
+  readonly id: string;
+  readonly tenantId: string;
+  readonly branchId: string | null;
+  readonly name: string;
+  readonly startAt: string;
+  readonly endAt: string;
+}
+
+export interface ApiDepartment {
+  readonly id: string;
+  readonly tenantId: string;
+  readonly branchId: string;
+  readonly name: string;
+  readonly slug: string;
+  readonly capacity: number;
+}
+
+export interface ApiServiceRequirement {
+  readonly id?: string;
+  readonly tenantId?: string;
+  readonly serviceId?: string;
+  readonly photoIdRequired: boolean;
+  readonly minAge: number | null;
+  readonly maxAge: number | null;
+  readonly requiredDocuments: readonly string[];
+  readonly customNotes: string | null;
+}
+
+export interface ApiService {
+  readonly id: string;
+  readonly tenantId: string;
+  readonly code: string;
+  readonly name: string;
+  readonly description: string | null;
+  readonly durationMinutes: number;
+  readonly status: "active" | "inactive";
+  readonly requirement: ApiServiceRequirement | null;
+}
+
+export interface ApiDiscoveredBranch {
+  readonly branchId: string;
+  readonly tenantId: string;
+  readonly branchName: string;
+  readonly status: "active" | "inactive";
+  readonly address: string;
+  readonly latitude: number;
+  readonly longitude: number;
+  readonly totalCapacity: number;
+  readonly activeBookingsCount: number;
+  readonly offeredServiceIds: readonly string[];
+  readonly loadLevel: "low" | "medium" | "high";
+  readonly loadRatio: number;
+  readonly distanceKm?: number;
+}
+
 export interface ApiAuditEvent {
   readonly id: string;
   readonly tenantId: string;
@@ -343,6 +417,106 @@ export class KlerionApi {
       method: "POST",
       body: JSON.stringify({ paymentReference }),
     });
+  }
+
+
+  listBranches(session: KlerionSession): Promise<ApiBranch[]> {
+    return this.authorizedRequest<ApiBranch[]>(session, "/branches");
+  }
+
+  createBranch(
+    session: KlerionSession,
+    input: Omit<ApiBranch, "id" | "tenantId" | "status"> & { status?: ApiBranch["status"] },
+  ): Promise<ApiBranch> {
+    return this.authorizedRequest<ApiBranch>(session, "/branches", { method: "POST", body: JSON.stringify(input) });
+  }
+
+  updateBranch(session: KlerionSession, branchId: string, input: Partial<Omit<ApiBranch, "id" | "tenantId">>): Promise<ApiBranch> {
+    return this.authorizedRequest<ApiBranch>(session, `/branches/${branchId}`, { method: "PATCH", body: JSON.stringify(input) });
+  }
+
+  listDepartments(session: KlerionSession, branchId: string): Promise<ApiDepartment[]> {
+    return this.authorizedRequest<ApiDepartment[]>(session, `/branches/${branchId}/departments`);
+  }
+
+  createDepartment(session: KlerionSession, branchId: string, input: Pick<ApiDepartment, "name" | "slug" | "capacity">): Promise<ApiDepartment> {
+    return this.authorizedRequest<ApiDepartment>(session, `/branches/${branchId}/departments`, { method: "POST", body: JSON.stringify(input) });
+  }
+
+  updateDepartment(session: KlerionSession, departmentId: string, input: Partial<Pick<ApiDepartment, "name" | "slug" | "capacity">>): Promise<ApiDepartment> {
+    return this.authorizedRequest<ApiDepartment>(session, `/departments/${departmentId}`, { method: "PATCH", body: JSON.stringify(input) });
+  }
+
+  deleteDepartment(session: KlerionSession, departmentId: string): Promise<void> {
+    return this.authorizedRequest<void>(session, `/departments/${departmentId}`, { method: "DELETE" });
+  }
+
+  getOperatingWindows(session: KlerionSession, branchId: string): Promise<ApiOperatingWindow[]> {
+    return this.authorizedRequest<ApiOperatingWindow[]>(session, `/branches/${branchId}/operating-windows`);
+  }
+
+  setOperatingWindows(session: KlerionSession, branchId: string, windows: readonly ApiOperatingWindow[]): Promise<{ success: true }> {
+    return this.authorizedRequest<{ success: true }>(session, `/branches/${branchId}/operating-windows`, { method: "PUT", body: JSON.stringify({ windows }) });
+  }
+
+  listBranchHolidays(session: KlerionSession, branchId: string): Promise<ApiHoliday[]> {
+    return this.authorizedRequest<ApiHoliday[]>(session, `/branches/${branchId}/holidays`);
+  }
+
+  createBranchHoliday(session: KlerionSession, branchId: string, input: Pick<ApiHoliday, "name" | "startAt" | "endAt">): Promise<ApiHoliday> {
+    return this.authorizedRequest<ApiHoliday>(session, `/branches/${branchId}/holidays`, { method: "POST", body: JSON.stringify(input) });
+  }
+
+  deleteHoliday(session: KlerionSession, holidayId: string): Promise<void> {
+    return this.authorizedRequest<void>(session, `/holidays/${holidayId}`, { method: "DELETE" });
+  }
+
+  listServices(session: KlerionSession): Promise<ApiService[]> {
+    return this.authorizedRequest<ApiService[]>(session, "/services");
+  }
+
+  createService(
+    session: KlerionSession,
+    input: Omit<ApiService, "id" | "tenantId" | "requirement"> & { requirements?: Omit<ApiServiceRequirement, "id" | "tenantId" | "serviceId"> },
+  ): Promise<ApiService> {
+    return this.authorizedRequest<ApiService>(session, "/services", { method: "POST", body: JSON.stringify(input) });
+  }
+
+  updateService(session: KlerionSession, serviceId: string, input: Partial<Omit<ApiService, "id" | "tenantId" | "requirement">>): Promise<ApiService> {
+    return this.authorizedRequest<ApiService>(session, `/services/${serviceId}`, { method: "PATCH", body: JSON.stringify(input) });
+  }
+
+  setServiceRequirement(
+    session: KlerionSession,
+    serviceId: string,
+    input: Omit<ApiServiceRequirement, "id" | "tenantId" | "serviceId">,
+  ): Promise<ApiServiceRequirement> {
+    return this.authorizedRequest<ApiServiceRequirement>(session, `/services/${serviceId}/requirements`, { method: "PUT", body: JSON.stringify(input) });
+  }
+
+  listBranchServices(session: KlerionSession, branchId: string): Promise<ApiService[]> {
+    return this.authorizedRequest<ApiService[]>(session, `/branches/${branchId}/services`);
+  }
+
+  assignServiceToBranch(session: KlerionSession, branchId: string, serviceId: string): Promise<{ id: string }> {
+    return this.authorizedRequest<{ id: string }>(session, `/branches/${branchId}/services`, { method: "POST", body: JSON.stringify({ serviceId }) });
+  }
+
+  removeServiceFromBranch(session: KlerionSession, branchId: string, serviceId: string): Promise<void> {
+    return this.authorizedRequest<void>(session, `/branches/${branchId}/services/${serviceId}`, { method: "DELETE" });
+  }
+
+  discoverBranches(
+    session: KlerionSession,
+    query: { serviceId?: string; latitude?: number; longitude?: number; limit?: number } = {},
+  ): Promise<ApiDiscoveredBranch[]> {
+    const params = new URLSearchParams();
+    if (query.serviceId) params.set("serviceId", query.serviceId);
+    if (query.latitude !== undefined) params.set("latitude", String(query.latitude));
+    if (query.longitude !== undefined) params.set("longitude", String(query.longitude));
+    if (query.limit !== undefined) params.set("limit", String(query.limit));
+    const suffix = params.size ? `?${params.toString()}` : "";
+    return this.authorizedRequest<ApiDiscoveredBranch[]>(session, `/branches/discover${suffix}`);
   }
 
   async listUsers(session: KlerionSession): Promise<ApiUser[]> {

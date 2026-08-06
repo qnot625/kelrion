@@ -7,10 +7,12 @@ import { registerTenantContext } from "./plugins/tenant-context.js";
 import { registerAppointmentRoutes } from "./routes/appointments.js";
 import { registerAuditRoutes } from "./routes/audit.js";
 import { registerAuthRoutes } from "./routes/auth.js";
+import { registerBranchRoutes, registerPublicBranchRoutes } from "./routes/branches.js";
 import { registerControlPlanePublicRoutes } from "./routes/control-plane-public.js";
 import { registerCustomerIntelligenceRoutes } from "./routes/customer-intelligence.js";
 import { registerEntitlementRoutes } from "./routes/entitlements.js";
 import { registerPlatformAdminRoutes } from "./routes/platform-admin.js";
+import { registerPublicServiceRoutes, registerServiceRoutes } from "./routes/services.js";
 import { registerTenantRoutes } from "./routes/tenants.js";
 import { registerUserRoutes } from "./routes/users.js";
 import { registerWorkforceLifecycleRoutes } from "./routes/workforce-lifecycle.js";
@@ -37,11 +39,28 @@ export function buildServer(context: AppContext): FastifyInstance {
     registerTenantContext(tenantScope, context.tenantRepository);
     registerAuthRoutes(tenantScope, context.authService, context.auditLog);
 
+    tenantScope.register(async (branchPublicScope) => {
+      registerModuleEntitlementGuard(branchPublicScope, context.controlPlaneService, "branches");
+      registerPublicBranchRoutes(branchPublicScope, context.branchRepository);
+      registerPublicServiceRoutes(branchPublicScope, context.serviceRepository, context.branchRepository);
+    });
+
     tenantScope.register(async (protectedScope) => {
       registerAuthGuard(protectedScope, context.authService);
       registerEntitlementRoutes(protectedScope, context.controlPlaneService, context.tenantRepository);
       registerAuditRoutes(protectedScope, context.auditLog);
       registerUserRoutes(protectedScope, context.userRepository, context.auditLog);
+
+      protectedScope.register(async (branchScope) => {
+        registerModuleEntitlementGuard(branchScope, context.controlPlaneService, "branches");
+        registerBranchRoutes(branchScope, context.branchRepository, context.auditLog);
+        registerServiceRoutes(
+          branchScope,
+          context.serviceRepository,
+          context.branchRepository,
+          context.auditLog,
+        );
+      });
 
       protectedScope.register(async (appointmentsScope) => {
         registerModuleEntitlementGuard(appointmentsScope, context.controlPlaneService, "appointments");

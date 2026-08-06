@@ -3,8 +3,11 @@ export type AppointmentStatus = "booked" | "checked_in" | "completed" | "cancell
 export interface Appointment {
   readonly id: string;
   readonly tenantId: string;
+  readonly branchId?: string | null;
+  readonly serviceId?: string | null;
   readonly customerEmail: string;
   readonly serviceName: string;
+  readonly customerMetadata?: Readonly<Record<string, unknown>>;
   readonly startAt: Date;
   readonly endAt: Date;
   readonly status: AppointmentStatus;
@@ -13,8 +16,11 @@ export interface Appointment {
 
 export interface BookAppointmentInput {
   tenantId: string;
+  branchId?: string | null;
+  serviceId?: string | null;
   customerEmail: string;
   serviceName: string;
+  customerMetadata?: Readonly<Record<string, unknown>>;
   startAt: Date;
   endAt: Date;
 }

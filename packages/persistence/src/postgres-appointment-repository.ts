@@ -13,8 +13,11 @@ function toAppointment(row: AppointmentRow): Appointment {
   return {
     id: row.id,
     tenantId: row.tenantId,
+    branchId: row.branchId,
+    serviceId: row.serviceId,
     customerEmail: row.customerEmail,
     serviceName: row.serviceName,
+    customerMetadata: row.customerMetadata,
     startAt: row.startAt,
     endAt: row.endAt,
     status: row.status as AppointmentStatus,
@@ -31,8 +34,11 @@ export class PostgresAppointmentRepository implements AppointmentRepository {
       .values({
         id: appointment.id,
         tenantId: appointment.tenantId,
+        branchId: appointment.branchId ?? null,
+        serviceId: appointment.serviceId ?? null,
         customerEmail: appointment.customerEmail,
         serviceName: appointment.serviceName,
+        customerMetadata: appointment.customerMetadata ?? {},
         startAt: appointment.startAt,
         endAt: appointment.endAt,
         status: appointment.status,

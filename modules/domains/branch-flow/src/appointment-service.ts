@@ -28,8 +28,11 @@ export class AppointmentService {
     const appointment: Appointment = {
       id: randomUUID(),
       tenantId: input.tenantId,
+      branchId: input.branchId ?? null,
+      serviceId: input.serviceId ?? null,
       customerEmail: input.customerEmail,
       serviceName: input.serviceName,
+      customerMetadata: input.customerMetadata ?? {},
       startAt: input.startAt,
       endAt: input.endAt,
       status: "booked",
