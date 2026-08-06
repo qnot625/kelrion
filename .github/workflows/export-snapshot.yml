@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - export/developer-1
+  pull_request:
+    branches:
+      - Developer-1
 
 permissions:
   contents: read
