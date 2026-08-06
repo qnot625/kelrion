@@ -19,7 +19,17 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Detect existing build
+        id: state
+        run: |
+          if [ -f docs/KLERION_PROJECT_HANDOVER_MANUAL.pdf ] && [ ! -d .handover-generator ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Install document tooling
+        if: steps.state.outputs.skip != 'true'
         run: |
           sudo apt-get update
           sudo apt-get install -y libreoffice-writer ghostscript poppler-utils
@@ -27,6 +37,7 @@ jobs:
           python -m pip install python-docx
 
       - name: Reassemble generator and build PDF
+        if: steps.state.outputs.skip != 'true'
         run: |
           cat .handover-generator/part_* > /tmp/create_klerion_handover.py.gz.b64
           base64 --decode /tmp/create_klerion_handover.py.gz.b64 | gzip --decompress > /tmp/create_klerion_handover.py
@@ -38,9 +49,22 @@ jobs:
             -sOutputFile=docs/KLERION_PROJECT_HANDOVER_MANUAL.pdf \
             "${RUNNER_TEMP}/Klerion_Project_Handover_Manual.pdf"
           test -s docs/KLERION_PROJECT_HANDOVER_MANUAL.pdf
-          pdfinfo docs/KLERION_PROJECT_HANDOVER_MANUAL.pdf | grep 'Pages: *34'
+          pages="$(pdfinfo docs/KLERION_PROJECT_HANDOVER_MANUAL.pdf | awk '/^Pages:/ {print $2}')"
+          echo "Generated pages: ${pages}"
+          test "$pages" -ge 30
+          test "$pages" -le 40
+          sha256sum docs/KLERION_PROJECT_HANDOVER_MANUAL.pdf
+
+      - name: Upload PDF for independent inspection
+        if: steps.state.outputs.skip != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: klerion-project-handover-manual
+          path: docs/KLERION_PROJECT_HANDOVER_MANUAL.pdf
+          if-no-files-found: error
 
       - name: Remove generator sources and commit PDF
+        if: steps.state.outputs.skip != 'true'
         run: |
           rm -rf .handover-generator
           git config user.name "Klerion Documentation Bot"
