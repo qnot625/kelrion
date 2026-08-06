@@ -2,7 +2,7 @@ name: Reconcile all branch histories
 
 on:
   push:
-    branches: [ops/merge-all-branches]
+    branches: [main, ops/merge-all-branches]
 
 permissions:
   contents: write
