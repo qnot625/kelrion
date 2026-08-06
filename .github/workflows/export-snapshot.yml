@@ -1,0 +1,26 @@
+name: Export Queue Snapshot
+
+on:
+  push:
+    branches:
+      - export/queue-management
+  pull_request:
+    branches:
+      - Queue-management
+
+permissions:
+  contents: read
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create source archive
+        run: tar --exclude=.git -czf /tmp/queue-management.tar.gz .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: queue-management-snapshot
+          path: /tmp/queue-management.tar.gz
+          if-no-files-found: error
+          retention-days: 1
