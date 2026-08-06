@@ -22,7 +22,7 @@ jobs:
       - name: Detect staged patch
         id: state
         run: |
-          if [ -d .port-patch ]; then
+          if [ -d .port-patch-v2 ] || [ -d .port-patch ]; then
             echo "apply=true" >> "$GITHUB_OUTPUT"
           else
             echo "apply=false" >> "$GITHUB_OUTPUT"
@@ -32,13 +32,23 @@ jobs:
         if: steps.state.outputs.apply == 'true'
         run: |
           set -euo pipefail
-          cat .port-patch/part_* > /tmp/feature-port.patch.gz.b64
-          base64 --decode /tmp/feature-port.patch.gz.b64 > /tmp/feature-port.patch.gz
-          gzip --decompress --stdout /tmp/feature-port.patch.gz > /tmp/feature-port.patch || true
+          if [ -d .port-patch-v2 ]; then
+            cat .port-patch-v2/chunk_* > /tmp/feature-port.patch.gz.b64
+            test "$(wc -c < /tmp/feature-port.patch.gz.b64)" -eq 56036
+            base64 --decode /tmp/feature-port.patch.gz.b64 > /tmp/feature-port.patch.gz
+            echo "ee987da1f92ebd761e504735a3a86d731cfbaf41f0e3e476e16b20548bf6d6a2  /tmp/feature-port.patch.gz" | sha256sum --check --strict
+            gzip --test /tmp/feature-port.patch.gz
+            gzip --decompress --stdout /tmp/feature-port.patch.gz > /tmp/feature-port.patch
+          else
+            cat .port-patch/part_* > /tmp/feature-port.patch.gz.b64
+            base64 --decode /tmp/feature-port.patch.gz.b64 > /tmp/feature-port.patch.gz
+            gzip --test /tmp/feature-port.patch.gz
+            gzip --decompress --stdout /tmp/feature-port.patch.gz > /tmp/feature-port.patch
+          fi
           test -s /tmp/feature-port.patch
           git apply --check --binary /tmp/feature-port.patch
           git apply --index --binary /tmp/feature-port.patch
-          rm -rf .port-patch
+          rm -rf .port-patch .port-patch-v2
           git add -A
 
       - name: Commit applied feature port
