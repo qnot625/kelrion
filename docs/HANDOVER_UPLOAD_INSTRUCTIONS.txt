@@ -1,0 +1,1 @@
+Binary handover upload staging marker. Safe to delete after the PDF is committed.
