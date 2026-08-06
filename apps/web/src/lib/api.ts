@@ -62,6 +62,49 @@ export interface ApiAuditEvent {
   readonly hash: string;
 }
 
+export type ApiLeaveType = "annual" | "sick" | "parental" | "unpaid" | "other";
+export type ApiLeaveStatus = "pending" | "approved" | "rejected" | "cancelled";
+
+export interface ApiLeaveRequest {
+  readonly id: string;
+  readonly requesterUserId: string;
+  readonly type: ApiLeaveType;
+  readonly startDate: string;
+  readonly endDate: string;
+  readonly workingDays: number;
+  readonly reason: string;
+  readonly status: ApiLeaveStatus;
+  readonly decisionNote: string | null;
+  readonly createdAt: string;
+}
+
+export interface ApiLeaveBalance {
+  readonly type: ApiLeaveType;
+  readonly allocatedDays: number | null;
+  readonly approvedDays: number;
+  readonly pendingDays: number;
+  readonly remainingDays: number | null;
+}
+
+export interface ApiLifecycleStep {
+  readonly id: string;
+  readonly title: string;
+  readonly ownerRole: string;
+  readonly status: "pending" | "completed";
+  readonly completedAt: string | null;
+}
+
+export interface ApiLifecyclePlan {
+  readonly id: string;
+  readonly subjectUserId: string;
+  readonly kind: "onboarding" | "offboarding";
+  readonly title: string;
+  readonly dueAt: string | null;
+  readonly status: "active" | "completed" | "cancelled";
+  readonly steps: readonly ApiLifecycleStep[];
+  readonly createdAt: string;
+}
+
 export class KlerionApiError extends Error {
   constructor(
     message: string,
@@ -152,6 +195,77 @@ export class KlerionApi {
 
   async listAuditEvents(session: KlerionSession): Promise<ApiAuditEvent[]> {
     return this.authorizedRequest<ApiAuditEvent[]>(session, "/audit-events");
+  }
+
+  async listLeaveRequests(session: KlerionSession, scope: "mine" | "all"): Promise<ApiLeaveRequest[]> {
+    return this.authorizedRequest<ApiLeaveRequest[]>(
+      session,
+      `/leave-requests${scope === "all" ? "?scope=all" : ""}`,
+    );
+  }
+
+  async listLeaveBalances(session: KlerionSession): Promise<ApiLeaveBalance[]> {
+    return this.authorizedRequest<ApiLeaveBalance[]>(session, "/leave-balances");
+  }
+
+  async submitLeaveRequest(
+    session: KlerionSession,
+    input: { type: ApiLeaveType; startDate: string; endDate: string; reason: string },
+  ): Promise<ApiLeaveRequest> {
+    return this.authorizedRequest<ApiLeaveRequest>(session, "/leave-requests", {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  }
+
+  async decideLeaveRequest(
+    session: KlerionSession,
+    id: string,
+    decision: "approve" | "reject",
+    note?: string,
+  ): Promise<ApiLeaveRequest> {
+    return this.authorizedRequest<ApiLeaveRequest>(
+      session,
+      `/leave-requests/${id}/${decision}`,
+      { method: "POST", body: JSON.stringify({ note }) },
+    );
+  }
+
+  async cancelLeaveRequest(session: KlerionSession, id: string): Promise<ApiLeaveRequest> {
+    return this.authorizedRequest<ApiLeaveRequest>(session, `/leave-requests/${id}/cancel`, {
+      method: "POST",
+    });
+  }
+
+  async listLifecyclePlans(session: KlerionSession): Promise<ApiLifecyclePlan[]> {
+    return this.authorizedRequest<ApiLifecyclePlan[]>(session, "/lifecycle-plans");
+  }
+
+  async createLifecyclePlan(
+    session: KlerionSession,
+    input: {
+      subjectUserId: string;
+      kind: "onboarding" | "offboarding";
+      title?: string;
+      dueAt?: string;
+    },
+  ): Promise<ApiLifecyclePlan> {
+    return this.authorizedRequest<ApiLifecyclePlan>(session, "/lifecycle-plans", {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  }
+
+  async completeLifecycleStep(
+    session: KlerionSession,
+    planId: string,
+    stepId: string,
+  ): Promise<ApiLifecyclePlan> {
+    return this.authorizedRequest<ApiLifecyclePlan>(
+      session,
+      `/lifecycle-plans/${planId}/steps/${stepId}/complete`,
+      { method: "POST" },
+    );
   }
 
   private authorizedRequest<T>(

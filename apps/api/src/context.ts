@@ -14,12 +14,19 @@ import {
   PostgresUserRepository,
   runMigrations,
 } from "@adminops/persistence";
+import {
+  InMemoryWorkforceLifecycleRepository,
+  PostgresWorkforceLifecycleRepository,
+  WorkforceLifecycleService,
+  type WorkforceLifecycleRepository,
+} from "./domains/workforce-lifecycle/index.js";
 
 export interface AppContext {
   tenantRepository: TenantRepository;
   userRepository: UserRepository;
   authService: AuthService;
   appointmentService: AppointmentService;
+  workforceLifecycleService: WorkforceLifecycleService;
   auditLog: AuditLog;
   close: () => Promise<void>;
 }
@@ -36,6 +43,7 @@ function assemble(
   tenantRepository: TenantRepository,
   userRepository: UserRepository,
   appointmentRepository: AppointmentRepository,
+  workforceLifecycleRepository: WorkforceLifecycleRepository,
   auditLog: AuditLog,
   close: () => Promise<void>,
 ): AppContext {
@@ -44,6 +52,7 @@ function assemble(
     userRepository,
     authService: new AuthService(userRepository, resolveTokenSecret()),
     appointmentService: new AppointmentService(appointmentRepository),
+    workforceLifecycleService: new WorkforceLifecycleService(workforceLifecycleRepository),
     auditLog,
     close,
   };
@@ -55,6 +64,7 @@ export function createAppContext(): AppContext {
     new InMemoryTenantRepository(),
     new InMemoryUserRepository(),
     new InMemoryAppointmentRepository(),
+    new InMemoryWorkforceLifecycleRepository(),
     new InMemoryAuditLog(),
     async () => {},
   );
@@ -67,6 +77,7 @@ export async function createPostgresAppContext(connectionString: string): Promis
     new PostgresTenantRepository(db),
     new PostgresUserRepository(db),
     new PostgresAppointmentRepository(db),
+    new PostgresWorkforceLifecycleRepository(db),
     new PostgresAuditLog(db),
     close,
   );
