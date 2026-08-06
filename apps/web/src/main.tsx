@@ -5,6 +5,7 @@ import "./styles/base.css";
 import "./styles/shell.css";
 import "./styles/views.css";
 import "./styles/workforce-lifecycle.css";
+import "./styles/control-plane.css";
 import "./features/customer-intelligence/customer-intelligence.css";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(

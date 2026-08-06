@@ -1,5 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import type { AuditLog } from "@adminops/audit";
+import type { ControlPlaneService } from "@adminops/control-plane";
+import { requireModule } from "../plugins/module-entitlement.js";
 import { requirePermission } from "../plugins/require-permission.js";
 import {
   CustomerCaseNotFoundError,
@@ -28,9 +30,10 @@ export function registerCustomerIntelligenceRoutes(
   app: FastifyInstance,
   cases: CustomerCaseService,
   executive: ExecutiveSummaryService,
+  controlPlane: ControlPlaneService,
   auditLog: AuditLog,
 ): void {
-  app.post("/cases", { preHandler: requirePermission("cases:create") }, async (request, reply) => {
+  app.post("/cases", { preHandler: [requireModule(controlPlane, "cases"), requirePermission("cases:create")] }, async (request, reply) => {
     const body = request.body as {
       customerEmail?: unknown;
       subject?: unknown;
@@ -66,7 +69,7 @@ export function registerCustomerIntelligenceRoutes(
     } catch (error) { return handleError(reply, error); }
   });
 
-  app.get("/cases", { preHandler: requirePermission("cases:manage") }, async (request, reply) => {
+  app.get("/cases", { preHandler: [requireModule(controlPlane, "cases"), requirePermission("cases:manage")] }, async (request, reply) => {
     const query = request.query as { status?: string; priority?: string; customerEmail?: string };
     if (query.status && !STATUSES.has(query.status as CaseStatus)) return reply.code(400).send({ error: "Invalid case status" });
     if (query.priority && !PRIORITIES.has(query.priority as CasePriority)) return reply.code(400).send({ error: "Invalid case priority" });
@@ -77,17 +80,17 @@ export function registerCustomerIntelligenceRoutes(
     }));
   });
 
-  app.get<{ Params: { id: string } }>("/cases/:id", { preHandler: requirePermission("cases:manage") }, async (request, reply) => {
+  app.get<{ Params: { id: string } }>("/cases/:id", { preHandler: [requireModule(controlPlane, "cases"), requirePermission("cases:manage")] }, async (request, reply) => {
     try { return reply.send(await cases.get(request.tenant!.tenantId, request.params.id)); }
     catch (error) { return handleError(reply, error); }
   });
 
-  app.get<{ Params: { id: string } }>("/cases/:id/comments", { preHandler: requirePermission("cases:manage") }, async (request, reply) => {
+  app.get<{ Params: { id: string } }>("/cases/:id/comments", { preHandler: [requireModule(controlPlane, "cases"), requirePermission("cases:manage")] }, async (request, reply) => {
     try { return reply.send(await cases.comments(request.tenant!.tenantId, request.params.id)); }
     catch (error) { return handleError(reply, error); }
   });
 
-  app.post<{ Params: { id: string } }>("/cases/:id/assign", { preHandler: requirePermission("cases:manage") }, async (request, reply) => {
+  app.post<{ Params: { id: string } }>("/cases/:id/assign", { preHandler: [requireModule(controlPlane, "cases"), requirePermission("cases:manage")] }, async (request, reply) => {
     const body = request.body as { ownerUserId?: unknown };
     if (body?.ownerUserId !== null && typeof body?.ownerUserId !== "string") {
       return reply.code(400).send({ error: "ownerUserId must be a string or null" });
@@ -110,7 +113,7 @@ export function registerCustomerIntelligenceRoutes(
     } catch (error) { return handleError(reply, error); }
   });
 
-  app.post<{ Params: { id: string } }>("/cases/:id/status", { preHandler: requirePermission("cases:manage") }, async (request, reply) => {
+  app.post<{ Params: { id: string } }>("/cases/:id/status", { preHandler: [requireModule(controlPlane, "cases"), requirePermission("cases:manage")] }, async (request, reply) => {
     const body = request.body as { status?: unknown; resolution?: unknown };
     if (typeof body?.status !== "string" || !STATUSES.has(body.status as CaseStatus)) {
       return reply.code(400).send({ error: "A valid status is required" });
@@ -134,7 +137,7 @@ export function registerCustomerIntelligenceRoutes(
     } catch (error) { return handleError(reply, error); }
   });
 
-  app.post<{ Params: { id: string } }>("/cases/:id/comments", { preHandler: requirePermission("cases:manage") }, async (request, reply) => {
+  app.post<{ Params: { id: string } }>("/cases/:id/comments", { preHandler: [requireModule(controlPlane, "cases"), requirePermission("cases:manage")] }, async (request, reply) => {
     const body = request.body as { body?: unknown; visibility?: unknown };
     if (
       typeof body?.body !== "string" || typeof body.visibility !== "string" ||
@@ -160,6 +163,6 @@ export function registerCustomerIntelligenceRoutes(
     } catch (error) { return handleError(reply, error); }
   });
 
-  app.get("/executive/summary", { preHandler: requirePermission("analytics:view") }, async (request, reply) =>
+  app.get("/executive/summary", { preHandler: [requireModule(controlPlane, "analytics"), requirePermission("analytics:view")] }, async (request, reply) =>
     reply.send(await executive.summary(request.tenant!.tenantId)));
 }

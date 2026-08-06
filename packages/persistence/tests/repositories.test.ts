@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 import { PGlite } from "@electric-sql/pglite";
@@ -21,9 +21,12 @@ import { PostgresAuditLog } from "../src/postgres-audit-log.js";
 async function freshDatabase(): Promise<Database> {
   const client = new PGlite();
   const db = drizzle(client, { schema }) as unknown as Database;
-  const migrationPath = fileURLToPath(new URL("../migrations/0001_initial.sql", import.meta.url));
-  for (const statement of splitSqlStatements(await readFile(migrationPath, "utf8"))) {
-    await db.execute(sql.raw(statement));
+  const migrationDirectory = fileURLToPath(new URL("../migrations", import.meta.url));
+  const files = (await readdir(migrationDirectory)).filter((file) => file.endsWith(".sql")).sort();
+  for (const file of files) {
+    for (const statement of splitSqlStatements(await readFile(`${migrationDirectory}/${file}`, "utf8"))) {
+      await db.execute(sql.raw(statement));
+    }
   }
   return db;
 }

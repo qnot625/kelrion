@@ -13,7 +13,8 @@
     "@adminops/identity": "*",
     "@adminops/tenancy": "*",
     "drizzle-orm": "^0.45.2",
-    "pg": "^8.13.1"
+    "pg": "^8.13.1",
+    "@adminops/control-plane": "*"
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.2.15",

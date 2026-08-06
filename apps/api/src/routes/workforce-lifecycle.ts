@@ -1,6 +1,8 @@
 import type { FastifyInstance } from "fastify";
 import type { AuditLog } from "@adminops/audit";
 import { hasPermission } from "@adminops/identity";
+import type { ControlPlaneService } from "@adminops/control-plane";
+import { requireModule } from "../plugins/module-entitlement.js";
 import { requirePermission } from "../plugins/require-permission.js";
 import {
   InsufficientLeaveBalanceError,
@@ -45,9 +47,10 @@ async function respondToDomainError(reply: { code(status: number): { send(body: 
 export function registerWorkforceLifecycleRoutes(
   app: FastifyInstance,
   service: WorkforceLifecycleService,
+  controlPlane: ControlPlaneService,
   auditLog: AuditLog,
 ): void {
-  app.post("/leave-requests", { preHandler: requirePermission("leave:request") }, async (request, reply) => {
+  app.post("/leave-requests", { preHandler: [requireModule(controlPlane, "leave"), requirePermission("leave:request")] }, async (request, reply) => {
     const body = request.body as { type?: unknown; startDate?: unknown; endDate?: unknown; reason?: unknown };
     if (
       typeof body?.type !== "string" || !LEAVE_TYPES.has(body.type as LeaveType) ||
@@ -81,7 +84,7 @@ export function registerWorkforceLifecycleRoutes(
     } catch (error) { return respondToDomainError(reply, error); }
   });
 
-  app.get("/leave-requests", { preHandler: requirePermission("leave:request") }, async (request, reply) => {
+  app.get("/leave-requests", { preHandler: [requireModule(controlPlane, "leave"), requirePermission("leave:request")] }, async (request, reply) => {
     const wantsAll = (request.query as { scope?: string }).scope === "all";
     if (wantsAll && !hasPermission(request.auth!.roles, "leave:approve")) {
       return reply.code(403).send({ error: 'Missing permission "leave:approve"' });
@@ -92,10 +95,10 @@ export function registerWorkforceLifecycleRoutes(
     ));
   });
 
-  app.get("/leave-balances", { preHandler: requirePermission("leave:request") }, async (request, reply) =>
+  app.get("/leave-balances", { preHandler: [requireModule(controlPlane, "leave"), requirePermission("leave:request")] }, async (request, reply) =>
     reply.send(await service.balances(request.tenant!.tenantId, request.auth!.userId)));
 
-  app.post<{ Params: { id: string } }>("/leave-requests/:id/approve", { preHandler: requirePermission("leave:approve") }, async (request, reply) => {
+  app.post<{ Params: { id: string } }>("/leave-requests/:id/approve", { preHandler: [requireModule(controlPlane, "leave"), requirePermission("leave:approve")] }, async (request, reply) => {
     try {
       const leave = await service.approveLeave(
         request.tenant!.tenantId,
@@ -115,7 +118,7 @@ export function registerWorkforceLifecycleRoutes(
     } catch (error) { return respondToDomainError(reply, error); }
   });
 
-  app.post<{ Params: { id: string } }>("/leave-requests/:id/reject", { preHandler: requirePermission("leave:approve") }, async (request, reply) => {
+  app.post<{ Params: { id: string } }>("/leave-requests/:id/reject", { preHandler: [requireModule(controlPlane, "leave"), requirePermission("leave:approve")] }, async (request, reply) => {
     try {
       const leave = await service.rejectLeave(
         request.tenant!.tenantId,
@@ -135,7 +138,7 @@ export function registerWorkforceLifecycleRoutes(
     } catch (error) { return respondToDomainError(reply, error); }
   });
 
-  app.post<{ Params: { id: string } }>("/leave-requests/:id/cancel", { preHandler: requirePermission("leave:request") }, async (request, reply) => {
+  app.post<{ Params: { id: string } }>("/leave-requests/:id/cancel", { preHandler: [requireModule(controlPlane, "leave"), requirePermission("leave:request")] }, async (request, reply) => {
     try {
       const leave = await service.cancelLeave(request.tenant!.tenantId, request.params.id, request.auth!.userId);
       await auditLog.record({
@@ -149,7 +152,7 @@ export function registerWorkforceLifecycleRoutes(
     } catch (error) { return respondToDomainError(reply, error); }
   });
 
-  app.post("/lifecycle-plans", { preHandler: requirePermission("lifecycle:manage") }, async (request, reply) => {
+  app.post("/lifecycle-plans", { preHandler: [requireModule(controlPlane, "lifecycle"), requirePermission("lifecycle:manage")] }, async (request, reply) => {
     const body = request.body as { subjectUserId?: unknown; kind?: unknown; title?: unknown; dueAt?: unknown; steps?: unknown };
     if (
       typeof body?.subjectUserId !== "string" || typeof body.kind !== "string" ||
@@ -188,7 +191,7 @@ export function registerWorkforceLifecycleRoutes(
     } catch (error) { return respondToDomainError(reply, error); }
   });
 
-  app.get("/lifecycle-plans", { preHandler: requirePermission("lifecycle:view") }, async (request, reply) => {
+  app.get("/lifecycle-plans", { preHandler: [requireModule(controlPlane, "lifecycle"), requirePermission("lifecycle:view")] }, async (request, reply) => {
     const canManage = hasPermission(request.auth!.roles, "lifecycle:manage");
     return reply.send(await service.listLifecyclePlans(
       request.tenant!.tenantId,
@@ -198,7 +201,7 @@ export function registerWorkforceLifecycleRoutes(
 
   app.post<{ Params: { planId: string; stepId: string } }>(
     "/lifecycle-plans/:planId/steps/:stepId/complete",
-    { preHandler: requirePermission("lifecycle:manage") },
+    { preHandler: [requireModule(controlPlane, "lifecycle"), requirePermission("lifecycle:manage")] },
     async (request, reply) => {
       try {
         const plan = await service.completeLifecycleStep(
@@ -220,7 +223,7 @@ export function registerWorkforceLifecycleRoutes(
     },
   );
 
-  app.post<{ Params: { id: string } }>("/lifecycle-plans/:id/cancel", { preHandler: requirePermission("lifecycle:manage") }, async (request, reply) => {
+  app.post<{ Params: { id: string } }>("/lifecycle-plans/:id/cancel", { preHandler: [requireModule(controlPlane, "lifecycle"), requirePermission("lifecycle:manage")] }, async (request, reply) => {
     try {
       const plan = await service.cancelLifecyclePlan(
         request.tenant!.tenantId,

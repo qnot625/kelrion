@@ -20,6 +20,10 @@ export function registerTenantContext(app: FastifyInstance, tenantRepository: Te
       await reply.code(404).send({ error: `Unknown tenant "${slug}"` });
       return;
     }
+    if (tenant.status !== "active") {
+      await reply.code(403).send({ error: `Organisation "${slug}" is ${tenant.status}` });
+      return;
+    }
 
     request.tenant = { tenantId: tenant.id, tenantSlug: tenant.slug };
   });

@@ -1,0 +1,15 @@
+{
+  "name": "@adminops/control-plane",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": "./src/index.ts",
+  "scripts": {
+    "test": "node --import tsx --test tests/control-plane.test.ts"
+  },
+  "dependencies": {
+    "@adminops/identity": "*",
+    "@adminops/tenancy": "*",
+    "jose": "^5.9.6"
+  }
+}

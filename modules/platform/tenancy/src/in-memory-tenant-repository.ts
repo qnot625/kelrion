@@ -33,4 +33,16 @@ export class InMemoryTenantRepository implements TenantRepository {
     const id = this.idBySlug.get(slug);
     return id ? this.byId.get(id) : undefined;
   }
+
+  async list(): Promise<Tenant[]> {
+    return [...this.byId.values()].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+  }
+
+  async updateStatus(id: string, status: Tenant["status"]): Promise<Tenant | undefined> {
+    const existing = this.byId.get(id);
+    if (!existing) return undefined;
+    const updated: Tenant = { ...existing, status };
+    this.byId.set(id, updated);
+    return updated;
+  }
 }

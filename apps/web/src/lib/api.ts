@@ -1,4 +1,5 @@
-import { decodeTokenRoles, type KlerionSession } from "./session";
+import { decodeTokenRoles, type KlerionSession, type ModuleKey } from "./session";
+import type { PlatformSession } from "./platform-session";
 
 const DEFAULT_API_BASE_URL = "/api";
 
@@ -16,11 +17,14 @@ export interface SignUpRequest {
   readonly fullName: string;
   readonly email: string;
   readonly password: string;
+  readonly enabledModules: readonly ModuleKey[];
+  readonly billingCycle: "monthly" | "annual";
+  readonly currency: "NGN" | "USD" | "GBP" | "EUR";
 }
 
 export type AuthenticationRequest = SignInRequest | SignUpRequest;
 
-interface TenantResponse {
+export interface TenantResponse {
   readonly id: string;
   readonly name: string;
   readonly slug: string;
@@ -29,6 +33,73 @@ interface TenantResponse {
 interface AuthResponse {
   readonly userId: string;
   readonly token: string;
+}
+
+interface OrganisationSignupResponse extends AuthResponse {
+  readonly tenant: TenantResponse;
+  readonly subscription: ApiSubscription;
+}
+
+export interface ApiModuleDefinition {
+  readonly key: ModuleKey;
+  readonly name: string;
+  readonly description: string;
+  readonly category: string;
+  readonly dependencies: readonly ModuleKey[];
+  readonly prices: Readonly<Record<"NGN" | "USD" | "GBP" | "EUR", number>>;
+  readonly availability: "live" | "preview";
+  readonly enabled?: boolean;
+}
+
+export interface ApiSubscription {
+  readonly id: string;
+  readonly tenantId: string;
+  readonly enabledModules: readonly ModuleKey[];
+  readonly billingCycle: "monthly" | "annual";
+  readonly currency: "NGN" | "USD" | "GBP" | "EUR";
+  readonly status: "trialing" | "active" | "past_due" | "suspended" | "cancelled";
+  readonly trialEndsAt: string | null;
+  readonly currentPeriodStart: string;
+  readonly currentPeriodEnd: string;
+  readonly unitAmount: number;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}
+
+export interface ApiEntitlements {
+  readonly subscriptionStatus: ApiSubscription["status"];
+  readonly enabledModules: readonly ModuleKey[];
+  readonly modules: readonly ApiModuleDefinition[];
+}
+
+export interface ApiInvoiceLineItem {
+  readonly moduleKey: ModuleKey;
+  readonly description: string;
+  readonly quantity: number;
+  readonly unitAmount: number;
+  readonly amount: number;
+}
+
+export interface ApiInvoice {
+  readonly id: string;
+  readonly tenantId: string;
+  readonly number: string;
+  readonly currency: ApiSubscription["currency"];
+  readonly billingCycle: ApiSubscription["billingCycle"];
+  readonly status: "draft" | "open" | "paid" | "overdue" | "void";
+  readonly lineItems: readonly ApiInvoiceLineItem[];
+  readonly amountDue: number;
+  readonly amountPaid: number;
+  readonly issuedAt: string;
+  readonly dueAt: string;
+  readonly paidAt: string | null;
+  readonly paymentReference: string | null;
+}
+
+export interface PlatformOrganisationSummary extends TenantResponse {
+  readonly status: "provisioning" | "active" | "suspended";
+  readonly createdAt: string;
+  readonly subscription: ApiSubscription | null;
 }
 
 export interface ApiUser {
@@ -106,10 +177,7 @@ export interface ApiLifecyclePlan {
 }
 
 export class KlerionApiError extends Error {
-  constructor(
-    message: string,
-    readonly status: number,
-  ) {
+  constructor(message: string, readonly status: number) {
     super(message);
     this.name = "KlerionApiError";
   }
@@ -135,46 +203,153 @@ export class KlerionApi {
     }
   }
 
-  async authenticate(input: AuthenticationRequest): Promise<KlerionSession> {
-    let tenantName = input.tenantSlug;
+  moduleCatalogue(): Promise<ApiModuleDefinition[]> {
+    return this.request<ApiModuleDefinition[]>("/module-catalogue");
+  }
 
+  async authenticate(input: AuthenticationRequest): Promise<KlerionSession> {
     if (input.mode === "signup") {
-      const tenant = await this.request<TenantResponse>("/tenants", {
+      const result = await this.request<OrganisationSignupResponse>("/organisations/signup", {
         method: "POST",
-        body: JSON.stringify({ name: input.tenantName, slug: input.tenantSlug }),
+        body: JSON.stringify({
+          name: input.tenantName,
+          slug: input.tenantSlug,
+          ownerEmail: input.email,
+          ownerPassword: input.password,
+          enabledModules: input.enabledModules,
+          billingCycle: input.billingCycle,
+          currency: input.currency,
+          trialDays: 14,
+        }),
       });
-      tenantName = tenant.name;
+      return {
+        mode: "live",
+        tenantSlug: result.tenant.slug,
+        tenantName: result.tenant.name,
+        email: input.email,
+        userId: result.userId,
+        roles: decodeTokenRoles(result.token),
+        enabledModules: result.subscription.enabledModules,
+        token: result.token,
+      };
     }
 
-    const result = await this.request<AuthResponse>(
-      input.mode === "signup" ? "/auth/signup" : "/auth/login",
-      {
-        method: "POST",
-        headers: { "X-Tenant-Slug": input.tenantSlug },
-        body: JSON.stringify({ email: input.email, password: input.password }),
-      },
-    );
-
-    return {
+    const result = await this.request<AuthResponse>("/auth/login", {
+      method: "POST",
+      headers: { "X-Tenant-Slug": input.tenantSlug },
+      body: JSON.stringify({ email: input.email, password: input.password }),
+    });
+    const provisional: KlerionSession = {
       mode: "live",
       tenantSlug: input.tenantSlug,
-      tenantName,
+      tenantName: input.tenantSlug,
       email: input.email,
       userId: result.userId,
       roles: decodeTokenRoles(result.token),
+      enabledModules: [],
       token: result.token,
     };
+    const [organisation, entitlements] = await Promise.all([
+      this.authorizedRequest<TenantResponse>(provisional, "/organisation"),
+      this.getEntitlements(provisional),
+    ]);
+    return { ...provisional, tenantName: organisation.name, enabledModules: entitlements.enabledModules };
+  }
+
+  getEntitlements(session: KlerionSession): Promise<ApiEntitlements> {
+    return this.authorizedRequest<ApiEntitlements>(session, "/entitlements");
+  }
+
+  getSubscription(session: KlerionSession): Promise<ApiSubscription> {
+    return this.authorizedRequest<ApiSubscription>(session, "/billing/subscription");
+  }
+
+  listBillingInvoices(session: KlerionSession): Promise<ApiInvoice[]> {
+    return this.authorizedRequest<ApiInvoice[]>(session, "/billing/invoices");
+  }
+
+  async platformBootstrap(email: string, password: string, bootstrapKey?: string): Promise<PlatformSession> {
+    const result = await this.request<{ adminId: string; token: string }>("/platform/auth/bootstrap", {
+      method: "POST",
+      headers: bootstrapKey ? { "X-Platform-Bootstrap-Key": bootstrapKey } : undefined,
+      body: JSON.stringify({ email, password }),
+    });
+    return { ...result, email };
+  }
+
+  async platformLogin(email: string, password: string): Promise<PlatformSession> {
+    const result = await this.request<{ adminId: string; token: string }>("/platform/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ email, password }),
+    });
+    return { ...result, email };
+  }
+
+  listPlatformModules(session: PlatformSession): Promise<ApiModuleDefinition[]> {
+    return this.platformRequest(session, "/platform/modules");
+  }
+
+  listPlatformOrganisations(session: PlatformSession): Promise<PlatformOrganisationSummary[]> {
+    return this.platformRequest(session, "/platform/organisations");
+  }
+
+  createPlatformOrganisation(
+    session: PlatformSession,
+    input: {
+      name: string;
+      slug: string;
+      ownerEmail: string;
+      ownerPassword: string;
+      enabledModules: readonly ModuleKey[];
+      billingCycle: ApiSubscription["billingCycle"];
+      currency: ApiSubscription["currency"];
+      trialDays: number;
+    },
+  ): Promise<PlatformOrganisationSummary> {
+    return this.platformRequest(session, "/platform/organisations", {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  }
+
+  updatePlatformOrganisationStatus(
+    session: PlatformSession,
+    tenantId: string,
+    status: PlatformOrganisationSummary["status"],
+  ): Promise<PlatformOrganisationSummary> {
+    return this.platformRequest(session, `/platform/organisations/${tenantId}/status`, {
+      method: "PATCH",
+      body: JSON.stringify({ status }),
+    });
+  }
+
+  updatePlatformSubscription(
+    session: PlatformSession,
+    tenantId: string,
+    input: Partial<Pick<ApiSubscription, "enabledModules" | "billingCycle" | "currency" | "status">>,
+  ): Promise<ApiSubscription> {
+    return this.platformRequest(session, `/platform/organisations/${tenantId}/subscription`, {
+      method: "PATCH",
+      body: JSON.stringify(input),
+    });
+  }
+
+  listPlatformInvoices(session: PlatformSession, tenantId?: string): Promise<ApiInvoice[]> {
+    return this.platformRequest(session, `/platform/invoices${tenantId ? `?tenantId=${encodeURIComponent(tenantId)}` : ""}`);
+  }
+
+  markPlatformInvoicePaid(session: PlatformSession, invoiceId: string, paymentReference: string): Promise<ApiInvoice> {
+    return this.platformRequest(session, `/platform/invoices/${invoiceId}/mark-paid`, {
+      method: "POST",
+      body: JSON.stringify({ paymentReference }),
+    });
   }
 
   async listUsers(session: KlerionSession): Promise<ApiUser[]> {
     return this.authorizedRequest<ApiUser[]>(session, "/users");
   }
 
-  async updateUserRoles(
-    session: KlerionSession,
-    userId: string,
-    roles: readonly string[],
-  ): Promise<ApiUser> {
+  async updateUserRoles(session: KlerionSession, userId: string, roles: readonly string[]): Promise<ApiUser> {
     return this.authorizedRequest<ApiUser>(session, `/users/${userId}/roles`, {
       method: "PATCH",
       body: JSON.stringify({ roles }),
@@ -198,10 +373,7 @@ export class KlerionApi {
   }
 
   async listLeaveRequests(session: KlerionSession, scope: "mine" | "all"): Promise<ApiLeaveRequest[]> {
-    return this.authorizedRequest<ApiLeaveRequest[]>(
-      session,
-      `/leave-requests${scope === "all" ? "?scope=all" : ""}`,
-    );
+    return this.authorizedRequest<ApiLeaveRequest[]>(session, `/leave-requests${scope === "all" ? "?scope=all" : ""}`);
   }
 
   async listLeaveBalances(session: KlerionSession): Promise<ApiLeaveBalance[]> {
@@ -224,17 +396,14 @@ export class KlerionApi {
     decision: "approve" | "reject",
     note?: string,
   ): Promise<ApiLeaveRequest> {
-    return this.authorizedRequest<ApiLeaveRequest>(
-      session,
-      `/leave-requests/${id}/${decision}`,
-      { method: "POST", body: JSON.stringify({ note }) },
-    );
+    return this.authorizedRequest<ApiLeaveRequest>(session, `/leave-requests/${id}/${decision}`, {
+      method: "POST",
+      body: JSON.stringify({ note }),
+    });
   }
 
   async cancelLeaveRequest(session: KlerionSession, id: string): Promise<ApiLeaveRequest> {
-    return this.authorizedRequest<ApiLeaveRequest>(session, `/leave-requests/${id}/cancel`, {
-      method: "POST",
-    });
+    return this.authorizedRequest<ApiLeaveRequest>(session, `/leave-requests/${id}/cancel`, { method: "POST" });
   }
 
   async listLifecyclePlans(session: KlerionSession): Promise<ApiLifecyclePlan[]> {
@@ -243,12 +412,7 @@ export class KlerionApi {
 
   async createLifecyclePlan(
     session: KlerionSession,
-    input: {
-      subjectUserId: string;
-      kind: "onboarding" | "offboarding";
-      title?: string;
-      dueAt?: string;
-    },
+    input: { subjectUserId: string; kind: "onboarding" | "offboarding"; title?: string; dueAt?: string },
   ): Promise<ApiLifecyclePlan> {
     return this.authorizedRequest<ApiLifecyclePlan>(session, "/lifecycle-plans", {
       method: "POST",
@@ -256,26 +420,19 @@ export class KlerionApi {
     });
   }
 
-  async completeLifecycleStep(
-    session: KlerionSession,
-    planId: string,
-    stepId: string,
-  ): Promise<ApiLifecyclePlan> {
-    return this.authorizedRequest<ApiLifecyclePlan>(
-      session,
-      `/lifecycle-plans/${planId}/steps/${stepId}/complete`,
-      { method: "POST" },
-    );
+  async completeLifecycleStep(session: KlerionSession, planId: string, stepId: string): Promise<ApiLifecyclePlan> {
+    return this.authorizedRequest<ApiLifecyclePlan>(session, `/lifecycle-plans/${planId}/steps/${stepId}/complete`, { method: "POST" });
   }
 
-  private authorizedRequest<T>(
-    session: KlerionSession,
-    path: string,
-    init: RequestInit = {},
-  ): Promise<T> {
-    if (!session.token) {
-      throw new KlerionApiError("This action requires a live API session.", 401);
-    }
+  private platformRequest<T>(session: PlatformSession, path: string, init: RequestInit = {}): Promise<T> {
+    return this.request<T>(path, {
+      ...init,
+      headers: { ...init.headers, Authorization: `Bearer ${session.token}` },
+    });
+  }
+
+  private authorizedRequest<T>(session: KlerionSession, path: string, init: RequestInit = {}): Promise<T> {
+    if (!session.token) throw new KlerionApiError("This action requires a live API session.", 401);
     return this.request<T>(path, {
       ...init,
       headers: {
@@ -295,20 +452,13 @@ export class KlerionApi {
         ...init.headers,
       },
     });
-
-    const body = (await response.json().catch(() => null)) as
-      | { error?: unknown }
-      | T
-      | null;
-
+    const body = (await response.json().catch(() => null)) as { error?: unknown } | T | null;
     if (!response.ok) {
-      const message =
-        body && typeof body === "object" && "error" in body && typeof body.error === "string"
-          ? body.error
-          : `Request failed with status ${response.status}`;
+      const message = body && typeof body === "object" && "error" in body && typeof body.error === "string"
+        ? body.error
+        : `Request failed with status ${response.status}`;
       throw new KlerionApiError(message, response.status);
     }
-
     return body as T;
   }
 }

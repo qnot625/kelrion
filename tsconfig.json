@@ -1,11 +1,26 @@
 {
   "files": [],
   "references": [
-    { "path": "modules/platform/tenancy" },
-    { "path": "modules/platform/identity" },
-    { "path": "modules/platform/audit" },
-    { "path": "modules/domains/branch-flow" },
-    { "path": "packages/persistence" },
-    { "path": "apps/api" }
+    {
+      "path": "modules/platform/tenancy"
+    },
+    {
+      "path": "modules/platform/identity"
+    },
+    {
+      "path": "modules/platform/audit"
+    },
+    {
+      "path": "modules/platform/control-plane"
+    },
+    {
+      "path": "modules/domains/branch-flow"
+    },
+    {
+      "path": "packages/persistence"
+    },
+    {
+      "path": "apps/api"
+    }
   ]
 }

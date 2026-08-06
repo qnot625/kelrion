@@ -1,17 +1,81 @@
-import { AlertTriangle, ArrowUpRight, CalendarDays, Clock3, TicketCheck, Users } from "lucide-react";
+import {
+  ArrowRight,
+  Blocks,
+  Building2,
+  CalendarClock,
+  CalendarDays,
+  ClipboardCheck,
+  FileInput,
+  Gauge,
+  MessageSquareWarning,
+  Network,
+  TicketCheck,
+  UsersRound,
+  Workflow,
+  type LucideIcon,
+} from "lucide-react";
+import type { RouteKey } from "../components/Shell";
+import type { KlerionSession, ModuleKey } from "../lib/session";
 
-const metrics = [
-  { label: "Customers served", value: "184", change: "+12.4%", icon: Users },
-  { label: "Active queue", value: "27", change: "Across 4 services", icon: TicketCheck },
-  { label: "Average wait", value: "11m", change: "3m faster", icon: Clock3 },
-  { label: "Appointments today", value: "62", change: "91% confirmed", icon: CalendarDays },
-];
-const activity = [
-  ["Account opening completed", "Victoria Island · 2 minutes ago"],
-  ["Role updated for operations@acme.com", "Security · 18 minutes ago"],
-  ["Interview moved to final stage", "Recruitment · 31 minutes ago"],
-];
+const modulePresentation: Record<ModuleKey, { name: string; description: string; icon: LucideIcon; route?: RouteKey; preview?: boolean }> = {
+  branches: { name: "Branches & Services", description: "Locations, departments, operating calendars and service discovery.", icon: Building2, route: "branches" },
+  appointments: { name: "Appointments", description: "Booking, scheduling, rescheduling and appointment operations.", icon: CalendarDays, route: "appointments" },
+  queue: { name: "Virtual Queue", description: "Remote check-in, tickets, counters, kiosks and display boards.", icon: TicketCheck, route: "queue" },
+  notifications: { name: "Notifications", description: "Templates, delivery logs, retries and reminders.", icon: Network, route: "notifications" },
+  employees: { name: "Employee Records", description: "Master records, organisation directory and reporting hierarchy.", icon: UsersRound, route: "employees" },
+  attendance: { name: "Time & Attendance", description: "Clock events, timesheets, offline sync and corrections.", icon: CalendarClock, route: "attendance" },
+  leave: { name: "Leave & Availability", description: "Balances, requests, approvals and workforce availability.", icon: CalendarClock, route: "leave" },
+  lifecycle: { name: "Onboarding & Offboarding", description: "Reusable employee lifecycle plans and accountable checklists.", icon: UsersRound, route: "lifecycle" },
+  forms: { name: "Dynamic Forms", description: "Versioned definitions, validation and form submissions.", icon: FileInput, route: "forms" },
+  workflow: { name: "Workflow Automation", description: "State machines, human tasks, delegation and execution history.", icon: Workflow, route: "workflow" },
+  approvals: { name: "Approvals", description: "Approval inbox, decisions, reassignment and information requests.", icon: ClipboardCheck, route: "approvals" },
+  "service-desk": { name: "Internal Service Desk", description: "Employee service requests, triage, comments and SLAs.", icon: Blocks, route: "serviceDesk" },
+  cases: { name: "Cases & Complaints", description: "Customer cases, ownership, priority and SLA resolution.", icon: MessageSquareWarning, route: "cases" },
+  analytics: { name: "Executive Intelligence", description: "Operational scorecards, trends and command-centre reporting.", icon: Gauge, route: "executive" },
+  recruitment: { name: "Recruitment", description: "Candidate pipeline and interview operations.", icon: UsersRound, route: "recruitment", preview: true },
+};
 
-export function DashboardView() {
-  return <section className="view"><header className="view-heading"><div><span className="eyebrow">Monday, 28 July</span><h1>Good morning. Here is what needs attention.</h1><p>A real-time view of service delivery, workforce activity, and operational risk.</p></div><button className="secondary">Export report</button></header><div className="metric-grid">{metrics.map(({ label, value, change, icon: Icon }) => <article className="metric-card" key={label}><div><span>{label}</span><strong>{value}</strong><small>{change}</small></div><i><Icon size={20} /></i></article>)}</div><div className="dashboard-grid"><article className="panel chart-panel"><header><div><h2>Service demand</h2><p>Customers served by hour</p></div><select><option>Today</option><option>This week</option></select></header><div className="bar-chart" aria-label="Service demand chart">{[32,48,61,70,57,82,74,91,68,55].map((height,index)=><div key={index}><span style={{height:`${height}%`}} /><small>{8+index}:00</small></div>)}</div></article><article className="panel attention-panel"><header><div><h2>Needs attention</h2><p>Prioritised operational signals</p></div><AlertTriangle size={19} /></header><div className="attention-list"><button><i className="danger" /><span><strong>Queue capacity at 82%</strong><small>Victoria Island branch</small></span><ArrowUpRight size={15} /></button><button><i className="warning" /><span><strong>4 approvals are overdue</strong><small>Oldest pending for 2 days</small></span><ArrowUpRight size={15} /></button><button><i className="info" /><span><strong>3 interviews begin today</strong><small>First session at 10:30</small></span><ArrowUpRight size={15} /></button></div></article><article className="panel activity-panel"><header><div><h2>Recent activity</h2><p>Latest organisation events</p></div><button>View audit trail</button></header>{activity.map(([title,meta])=><div className="activity-row" key={title}><span /><div><strong>{title}</strong><small>{meta}</small></div></div>)}</article><article className="panel branch-panel"><header><div><h2>Branch performance</h2><p>Today&apos;s service health</p></div></header>{[["Victoria Island",92,"184 served"],["Ikeja",78,"126 served"],["Abuja Central",68,"103 served"]].map(([name,score,meta])=><div className="branch-row" key={String(name)}><div><strong>{name}</strong><small>{meta}</small></div><div className="progress"><span style={{width:`${score}%`}} /></div><b>{score}%</b></div>)}</article></div></section>;
+export function DashboardView({ session, onOpen }: { readonly session: KlerionSession; readonly onOpen: (route: RouteKey) => void }) {
+  return (
+    <section className="view modular-dashboard">
+      <header className="view-heading">
+        <div>
+          <span className="eyebrow">Entitlement-aware workspace</span>
+          <h1>{session.tenantName} operational control centre</h1>
+          <p>Your dashboard contains only the modules enabled for this organisation. Add or remove modules from Subscription & Billing.</p>
+        </div>
+        <button className="secondary" onClick={() => onOpen("billing")}>Manage subscription</button>
+      </header>
+
+      <div className="entitlement-summary">
+        <article><span>Enabled modules</span><strong>{session.enabledModules.length}</strong><small>Dependencies included automatically</small></article>
+        <article><span>Workspace access</span><strong>{session.roles.includes("owner") ? "Owner" : "Member"}</strong><small>Role and module checks are enforced server-side</small></article>
+        <article><span>Organisation</span><strong>{session.tenantSlug}</strong><small>Tenant-isolated data boundary</small></article>
+      </div>
+
+      <div className="module-workspace-grid">
+        {session.enabledModules.map((key) => {
+          const module = modulePresentation[key];
+          const Icon = module.icon;
+          return (
+            <button key={key} className="module-workspace-card" onClick={() => module.route && onOpen(module.route)}>
+              <span className="module-card-icon"><Icon size={22} /></span>
+              <span className="module-card-copy"><strong>{module.name}</strong><small>{module.description}</small></span>
+              <em className={module.preview ? "preview" : "enabled"}>{module.preview ? "Preview" : "Enabled"}</em>
+              <ArrowRight size={17} />
+            </button>
+          );
+        })}
+      </div>
+
+      {session.enabledModules.length === 0 && (
+        <div className="empty-module-state">
+          <Blocks size={34} />
+          <h2>No operational modules are enabled</h2>
+          <p>An organisation owner or Klerion God admin must activate at least one package before operational dashboards become available.</p>
+          <button className="primary" onClick={() => onOpen("billing")}>Choose modules</button>
+        </div>
+      )}
+    </section>
+  );
 }

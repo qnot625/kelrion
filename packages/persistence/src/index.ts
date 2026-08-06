@@ -5,3 +5,4 @@ export * from "./postgres-tenant-repository.js";
 export * from "./postgres-user-repository.js";
 export * from "./postgres-appointment-repository.js";
 export * from "./postgres-audit-log.js";
+export * from "./postgres-control-plane-repository.js";

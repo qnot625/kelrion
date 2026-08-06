@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import {
   assertValidSlug,
   DuplicateTenantSlugError,
@@ -49,6 +49,16 @@ export class PostgresTenantRepository implements TenantRepository {
 
   async findBySlug(slug: string): Promise<Tenant | undefined> {
     const [row] = await this.db.select().from(tenants).where(eq(tenants.slug, slug)).limit(1);
+    return row ? toTenant(row) : undefined;
+  }
+
+  async list(): Promise<Tenant[]> {
+    const rows = await this.db.select().from(tenants).orderBy(asc(tenants.createdAt));
+    return rows.map(toTenant);
+  }
+
+  async updateStatus(id: string, status: TenantStatus): Promise<Tenant | undefined> {
+    const [row] = await this.db.update(tenants).set({ status }).where(eq(tenants.id, id)).returning();
     return row ? toTenant(row) : undefined;
   }
 }

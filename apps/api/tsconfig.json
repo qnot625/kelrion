@@ -4,12 +4,27 @@
     "rootDir": "src",
     "outDir": "dist"
   },
-  "include": ["src"],
+  "include": [
+    "src"
+  ],
   "references": [
-    { "path": "../../modules/platform/tenancy" },
-    { "path": "../../modules/platform/identity" },
-    { "path": "../../modules/platform/audit" },
-    { "path": "../../modules/domains/branch-flow" },
-    { "path": "../../packages/persistence" }
+    {
+      "path": "../../modules/platform/control-plane"
+    },
+    {
+      "path": "../../modules/platform/tenancy"
+    },
+    {
+      "path": "../../modules/platform/identity"
+    },
+    {
+      "path": "../../modules/platform/audit"
+    },
+    {
+      "path": "../../modules/domains/branch-flow"
+    },
+    {
+      "path": "../../packages/persistence"
+    }
   ]
 }

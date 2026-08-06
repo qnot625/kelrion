@@ -2,17 +2,28 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { PGlite } from "@electric-sql/pglite";
 import { drizzle } from "drizzle-orm/pglite";
+import { ControlPlaneService, PlatformAdminAuthService } from "@adminops/control-plane";
 import { AuthService } from "@adminops/identity";
 import { AppointmentService } from "@adminops/branch-flow";
 import {
   PostgresAppointmentRepository,
   PostgresAuditLog,
+  PostgresControlPlaneRepository,
   PostgresTenantRepository,
   PostgresUserRepository,
   runMigrations,
   schema,
   type Database,
 } from "@adminops/persistence";
+import {
+  CustomerCaseService,
+  ExecutiveSummaryService,
+  PostgresCustomerIntelligenceRepository,
+} from "../src/domains/customer-intelligence/index.js";
+import {
+  PostgresWorkforceLifecycleRepository,
+  WorkforceLifecycleService,
+} from "../src/domains/workforce-lifecycle/index.js";
 import type { AppContext } from "../src/context.js";
 import { buildServer } from "../src/server.js";
 
@@ -21,13 +32,35 @@ async function postgresBackedContext(): Promise<AppContext> {
   const db = drizzle(new PGlite(), { schema }) as unknown as Database;
   await runMigrations(db);
 
+  const tenantRepository = new PostgresTenantRepository(db);
+  const userRepository = new PostgresUserRepository(db);
+  const controlPlaneRepository = new PostgresControlPlaneRepository(db);
+  const appointmentService = new AppointmentService(new PostgresAppointmentRepository(db));
+  const customerIntelligenceRepository = new PostgresCustomerIntelligenceRepository(db);
+
   return {
-    tenantRepository: new PostgresTenantRepository(db),
-    authService: new AuthService(
-      new PostgresUserRepository(db),
-      new TextEncoder().encode("test-only-secret"),
+    tenantRepository,
+    userRepository,
+    controlPlaneRepository,
+    authService: new AuthService(userRepository, new TextEncoder().encode("test-only-secret")),
+    platformAdminAuthService: new PlatformAdminAuthService(
+      controlPlaneRepository,
+      new TextEncoder().encode("test-only-platform-secret"),
     ),
-    appointmentService: new AppointmentService(new PostgresAppointmentRepository(db)),
+    controlPlaneService: new ControlPlaneService(
+      controlPlaneRepository,
+      tenantRepository,
+      userRepository,
+    ),
+    appointmentService,
+    workforceLifecycleService: new WorkforceLifecycleService(
+      new PostgresWorkforceLifecycleRepository(db),
+    ),
+    customerCaseService: new CustomerCaseService(customerIntelligenceRepository),
+    executiveSummaryService: new ExecutiveSummaryService(
+      customerIntelligenceRepository,
+      appointmentService,
+    ),
     auditLog: new PostgresAuditLog(db),
     close: async () => {},
   };

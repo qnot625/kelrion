@@ -1,4 +1,10 @@
 import { InMemoryAuditLog, type AuditLog } from "@adminops/audit";
+import {
+  ControlPlaneService,
+  InMemoryControlPlaneRepository,
+  PlatformAdminAuthService,
+  type ControlPlaneRepository,
+} from "@adminops/control-plane";
 import { AuthService, InMemoryUserRepository, type UserRepository } from "@adminops/identity";
 import { InMemoryTenantRepository, type TenantRepository } from "@adminops/tenancy";
 import {
@@ -10,6 +16,7 @@ import {
   connectPostgres,
   PostgresAppointmentRepository,
   PostgresAuditLog,
+  PostgresControlPlaneRepository,
   PostgresTenantRepository,
   PostgresUserRepository,
   runMigrations,
@@ -31,7 +38,10 @@ import {
 export interface AppContext {
   tenantRepository: TenantRepository;
   userRepository: UserRepository;
+  controlPlaneRepository: ControlPlaneRepository;
   authService: AuthService;
+  platformAdminAuthService: PlatformAdminAuthService;
+  controlPlaneService: ControlPlaneService;
   appointmentService: AppointmentService;
   workforceLifecycleService: WorkforceLifecycleService;
   customerCaseService: CustomerCaseService;
@@ -40,12 +50,12 @@ export interface AppContext {
   close: () => Promise<void>;
 }
 
-function resolveTokenSecret(): Uint8Array {
-  const configured = process.env.SESSION_TOKEN_SECRET;
+function resolveTokenSecret(name: "SESSION_TOKEN_SECRET" | "PLATFORM_ADMIN_TOKEN_SECRET"): Uint8Array {
+  const configured = process.env[name];
   if (!configured && process.env.NODE_ENV === "production") {
-    throw new Error("SESSION_TOKEN_SECRET must be set in production");
+    throw new Error(`${name} must be set in production`);
   }
-  return new TextEncoder().encode(configured ?? "dev-only-insecure-secret-change-me");
+  return new TextEncoder().encode(configured ?? `dev-only-${name.toLowerCase()}-change-me`);
 }
 
 function assemble(
@@ -54,14 +64,23 @@ function assemble(
   appointmentRepository: AppointmentRepository,
   workforceLifecycleRepository: WorkforceLifecycleRepository,
   customerIntelligenceRepository: CustomerIntelligenceRepository,
+  controlPlaneRepository: ControlPlaneRepository,
   auditLog: AuditLog,
   close: () => Promise<void>,
 ): AppContext {
   const appointmentService = new AppointmentService(appointmentRepository);
+  const authService = new AuthService(userRepository, resolveTokenSecret("SESSION_TOKEN_SECRET"));
+  const controlPlaneService = new ControlPlaneService(controlPlaneRepository, tenantRepository, userRepository);
   return {
     tenantRepository,
     userRepository,
-    authService: new AuthService(userRepository, resolveTokenSecret()),
+    controlPlaneRepository,
+    authService,
+    platformAdminAuthService: new PlatformAdminAuthService(
+      controlPlaneRepository,
+      resolveTokenSecret("PLATFORM_ADMIN_TOKEN_SECRET"),
+    ),
+    controlPlaneService,
     appointmentService,
     workforceLifecycleService: new WorkforceLifecycleService(workforceLifecycleRepository),
     customerCaseService: new CustomerCaseService(customerIntelligenceRepository),
@@ -79,6 +98,7 @@ export function createAppContext(): AppContext {
     new InMemoryAppointmentRepository(),
     new InMemoryWorkforceLifecycleRepository(),
     new InMemoryCustomerIntelligenceRepository(),
+    new InMemoryControlPlaneRepository(),
     new InMemoryAuditLog(),
     async () => {},
   );
@@ -93,6 +113,7 @@ export async function createPostgresAppContext(connectionString: string): Promis
     new PostgresAppointmentRepository(db),
     new PostgresWorkforceLifecycleRepository(db),
     new PostgresCustomerIntelligenceRepository(db),
+    new PostgresControlPlaneRepository(db),
     new PostgresAuditLog(db),
     close,
   );
@@ -101,11 +122,7 @@ export async function createPostgresAppContext(connectionString: string): Promis
 /** Uses Postgres when DATABASE_URL is set, otherwise falls back to in-memory. */
 export async function createAppContextFromEnv(): Promise<AppContext> {
   const connectionString = process.env.DATABASE_URL;
-  if (connectionString) {
-    return createPostgresAppContext(connectionString);
-  }
-  if (process.env.NODE_ENV === "production") {
-    throw new Error("DATABASE_URL must be set in production");
-  }
+  if (connectionString) return createPostgresAppContext(connectionString);
+  if (process.env.NODE_ENV === "production") throw new Error("DATABASE_URL must be set in production");
   return createAppContext();
 }

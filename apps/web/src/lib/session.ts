@@ -1,5 +1,22 @@
 export type SessionMode = "live" | "demo";
 
+export type ModuleKey =
+  | "branches"
+  | "appointments"
+  | "queue"
+  | "notifications"
+  | "employees"
+  | "attendance"
+  | "leave"
+  | "lifecycle"
+  | "forms"
+  | "workflow"
+  | "approvals"
+  | "service-desk"
+  | "cases"
+  | "analytics"
+  | "recruitment";
+
 export interface KlerionSession {
   readonly mode: SessionMode;
   readonly tenantSlug: string;
@@ -7,10 +24,11 @@ export interface KlerionSession {
   readonly email: string;
   readonly userId: string;
   readonly roles: readonly string[];
+  readonly enabledModules: readonly ModuleKey[];
   readonly token?: string;
 }
 
-const STORAGE_KEY = "klerion.session.v1";
+const STORAGE_KEY = "klerion.session.v2";
 
 export function loadSession(): KlerionSession | null {
   try {
@@ -23,10 +41,9 @@ export function loadSession(): KlerionSession | null {
       typeof parsed.tenantName !== "string" ||
       typeof parsed.email !== "string" ||
       typeof parsed.userId !== "string" ||
-      !Array.isArray(parsed.roles)
-    ) {
-      return null;
-    }
+      !Array.isArray(parsed.roles) ||
+      !Array.isArray(parsed.enabledModules)
+    ) return null;
     return parsed as KlerionSession;
   } catch {
     return null;
@@ -39,6 +56,7 @@ export function saveSession(session: KlerionSession): void {
 
 export function clearSession(): void {
   localStorage.removeItem(STORAGE_KEY);
+  localStorage.removeItem("klerion.session.v1");
 }
 
 export function decodeTokenRoles(token: string): string[] {
