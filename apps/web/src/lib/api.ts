@@ -109,15 +109,52 @@ export interface ApiUser {
   readonly createdAt: string;
 }
 
+export type ApiAppointmentStatus = "booked" | "checked_in" | "completed" | "cancelled" | "no_show";
+
 export interface ApiAppointment {
   readonly id: string;
   readonly tenantId: string;
+  readonly branchId: string | null;
+  readonly serviceId: string | null;
   readonly customerEmail: string;
   readonly serviceName: string;
+  readonly customerMetadata: Readonly<Record<string, unknown>>;
   readonly startAt: string;
   readonly endAt: string;
-  readonly status: string;
+  readonly status: ApiAppointmentStatus;
   readonly createdAt: string;
+  readonly updatedAt?: string;
+}
+
+export interface ApiTimeSlot {
+  readonly startAt: string;
+  readonly endAt: string;
+}
+
+export interface ApiWaitlistEntry {
+  readonly id: string;
+  readonly tenantId: string;
+  readonly branchId: string;
+  readonly serviceId: string;
+  readonly customerEmail: string;
+  readonly customerMetadata: Readonly<Record<string, unknown>>;
+  readonly desiredStartAt: string | null;
+  readonly desiredEndAt: string | null;
+  readonly queuePosition: number;
+  readonly status: "waiting" | "promoted" | "removed";
+  readonly promotedAppointmentId: string | null;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}
+
+export interface AppointmentBookingInput {
+  readonly branchId?: string;
+  readonly serviceId?: string;
+  readonly serviceName?: string;
+  readonly customerEmail: string;
+  readonly customerMetadata?: Readonly<Record<string, unknown>>;
+  readonly startAt: string;
+  readonly endAt: string;
 }
 
 
@@ -534,12 +571,82 @@ export class KlerionApi {
     return this.authorizedRequest<ApiAppointment[]>(session, "/appointments");
   }
 
+  async createAppointment(session: KlerionSession, input: AppointmentBookingInput): Promise<ApiAppointment> {
+    return this.authorizedRequest<ApiAppointment>(session, "/appointments", { method: "POST", body: JSON.stringify(input) });
+  }
+
+  appointmentAvailability(
+    session: KlerionSession,
+    query: { branchId: string; serviceId: string; startAt: string; endAt: string; slotIntervalMinutes?: number },
+  ): Promise<ApiTimeSlot[]> {
+    return this.publicAppointmentAvailability(session.tenantSlug, query);
+  }
+
   async checkInAppointment(session: KlerionSession, appointmentId: string): Promise<ApiAppointment> {
     return this.authorizedRequest<ApiAppointment>(session, `/appointments/${appointmentId}/check-in`, { method: "POST" });
   }
 
   async completeAppointment(session: KlerionSession, appointmentId: string): Promise<ApiAppointment> {
     return this.authorizedRequest<ApiAppointment>(session, `/appointments/${appointmentId}/complete`, { method: "POST" });
+  }
+
+  async cancelAppointment(session: KlerionSession, appointmentId: string): Promise<ApiAppointment> {
+    return this.authorizedRequest<ApiAppointment>(session, `/appointments/${appointmentId}/cancel`, { method: "POST" });
+  }
+
+  async markAppointmentNoShow(session: KlerionSession, appointmentId: string): Promise<ApiAppointment> {
+    return this.authorizedRequest<ApiAppointment>(session, `/appointments/${appointmentId}/no-show`, { method: "POST" });
+  }
+
+  async rescheduleAppointment(session: KlerionSession, appointmentId: string, startAt: string, endAt: string): Promise<ApiAppointment> {
+    return this.authorizedRequest<ApiAppointment>(session, `/appointments/${appointmentId}/reschedule`, {
+      method: "PATCH", body: JSON.stringify({ startAt, endAt }),
+    });
+  }
+
+  listWaitlists(session: KlerionSession): Promise<ApiWaitlistEntry[]> {
+    return this.authorizedRequest<ApiWaitlistEntry[]>(session, "/waitlists");
+  }
+
+  addToWaitlist(
+    session: KlerionSession,
+    input: { branchId: string; serviceId: string; customerEmail: string; desiredStartAt?: string; desiredEndAt?: string },
+  ): Promise<ApiWaitlistEntry> {
+    return this.authorizedRequest<ApiWaitlistEntry>(session, "/waitlists", { method: "POST", body: JSON.stringify(input) });
+  }
+
+  removeFromWaitlist(session: KlerionSession, id: string): Promise<ApiWaitlistEntry> {
+    return this.authorizedRequest<ApiWaitlistEntry>(session, `/waitlists/${id}`, { method: "DELETE" });
+  }
+
+  listPublicBranches(tenantSlug: string): Promise<ApiBranch[]> {
+    return this.tenantRequest<ApiBranch[]>(tenantSlug, "/branches");
+  }
+
+  listPublicBranchServices(tenantSlug: string, branchId: string): Promise<ApiService[]> {
+    return this.tenantRequest<ApiService[]>(tenantSlug, `/branches/${branchId}/services`);
+  }
+
+  publicAppointmentAvailability(
+    tenantSlug: string,
+    query: { branchId: string; serviceId: string; startAt: string; endAt: string; slotIntervalMinutes?: number },
+  ): Promise<ApiTimeSlot[]> {
+    const params = new URLSearchParams({
+      branchId: query.branchId, serviceId: query.serviceId, startAt: query.startAt, endAt: query.endAt,
+    });
+    if (query.slotIntervalMinutes) params.set("slotIntervalMinutes", String(query.slotIntervalMinutes));
+    return this.tenantRequest<ApiTimeSlot[]>(tenantSlug, `/public/appointments/availability?${params.toString()}`);
+  }
+
+  publicBookAppointment(tenantSlug: string, input: AppointmentBookingInput): Promise<ApiAppointment> {
+    return this.tenantRequest<ApiAppointment>(tenantSlug, "/public/appointments", { method: "POST", body: JSON.stringify(input) });
+  }
+
+  publicJoinWaitlist(
+    tenantSlug: string,
+    input: { branchId: string; serviceId: string; customerEmail: string; desiredStartAt?: string; desiredEndAt?: string },
+  ): Promise<ApiWaitlistEntry> {
+    return this.tenantRequest<ApiWaitlistEntry>(tenantSlug, "/public/waitlists", { method: "POST", body: JSON.stringify(input) });
   }
 
   async listAuditEvents(session: KlerionSession): Promise<ApiAuditEvent[]> {
@@ -596,6 +703,13 @@ export class KlerionApi {
 
   async completeLifecycleStep(session: KlerionSession, planId: string, stepId: string): Promise<ApiLifecyclePlan> {
     return this.authorizedRequest<ApiLifecyclePlan>(session, `/lifecycle-plans/${planId}/steps/${stepId}/complete`, { method: "POST" });
+  }
+
+  private tenantRequest<T>(tenantSlug: string, path: string, init: RequestInit = {}): Promise<T> {
+    return this.request<T>(path, {
+      ...init,
+      headers: { ...init.headers, "X-Tenant-Slug": tenantSlug },
+    });
   }
 
   private platformRequest<T>(session: PlatformSession, path: string, init: RequestInit = {}): Promise<T> {

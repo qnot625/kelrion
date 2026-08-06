@@ -4,7 +4,7 @@ import { registerAuthGuard } from "./plugins/auth-guard.js";
 import { registerModuleEntitlementGuard } from "./plugins/module-entitlement-guard.js";
 import { registerPlatformAdminGuard } from "./plugins/platform-admin-guard.js";
 import { registerTenantContext } from "./plugins/tenant-context.js";
-import { registerAppointmentRoutes } from "./routes/appointments.js";
+import { registerAppointmentRoutes, registerPublicAppointmentRoutes } from "./routes/appointments.js";
 import { registerAuditRoutes } from "./routes/audit.js";
 import { registerAuthRoutes } from "./routes/auth.js";
 import { registerBranchRoutes, registerPublicBranchRoutes } from "./routes/branches.js";
@@ -16,6 +16,7 @@ import { registerPublicServiceRoutes, registerServiceRoutes } from "./routes/ser
 import { registerTenantRoutes } from "./routes/tenants.js";
 import { registerUserRoutes } from "./routes/users.js";
 import { registerWorkforceLifecycleRoutes } from "./routes/workforce-lifecycle.js";
+import { registerPublicWaitlistRoutes, registerWaitlistRoutes } from "./routes/waitlists.js";
 
 export function buildServer(context: AppContext): FastifyInstance {
   const app = Fastify({ logger: false });
@@ -45,6 +46,12 @@ export function buildServer(context: AppContext): FastifyInstance {
       registerPublicServiceRoutes(branchPublicScope, context.serviceRepository, context.branchRepository);
     });
 
+    tenantScope.register(async (appointmentPublicScope) => {
+      registerModuleEntitlementGuard(appointmentPublicScope, context.controlPlaneService, "appointments");
+      registerPublicAppointmentRoutes(appointmentPublicScope, context.appointmentService, context.auditLog);
+      registerPublicWaitlistRoutes(appointmentPublicScope, context.appointmentService, context.auditLog);
+    });
+
     tenantScope.register(async (protectedScope) => {
       registerAuthGuard(protectedScope, context.authService);
       registerEntitlementRoutes(protectedScope, context.controlPlaneService, context.tenantRepository);
@@ -65,6 +72,7 @@ export function buildServer(context: AppContext): FastifyInstance {
       protectedScope.register(async (appointmentsScope) => {
         registerModuleEntitlementGuard(appointmentsScope, context.controlPlaneService, "appointments");
         registerAppointmentRoutes(appointmentsScope, context.appointmentService, context.auditLog);
+        registerWaitlistRoutes(appointmentsScope, context.appointmentService, context.auditLog);
       });
 
       registerWorkforceLifecycleRoutes(

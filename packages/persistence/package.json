@@ -5,7 +5,7 @@
   "type": "module",
   "exports": "./src/index.ts",
   "scripts": {
-    "test": "node --import tsx --test tests/repositories.test.ts tests/branch-service-repositories.test.ts"
+    "test": "node --import tsx --test tests/repositories.test.ts tests/branch-service-repositories.test.ts tests/waitlist-repository.test.ts"
   },
   "dependencies": {
     "@adminops/audit": "*",

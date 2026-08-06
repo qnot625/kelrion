@@ -18,4 +18,19 @@ export class InMemoryAppointmentRepository implements AppointmentRepository {
       .filter((appointment) => appointment.tenantId === tenantId)
       .sort((a, b) => a.startAt.getTime() - b.startAt.getTime());
   }
+
+  async listByBranchAndDateRange(
+    tenantId: string,
+    branchId: string,
+    startAt: Date,
+    endAt: Date,
+  ): Promise<Appointment[]> {
+    return [...this.byId.values()]
+      .filter((appointment) =>
+        appointment.tenantId === tenantId &&
+        appointment.branchId === branchId &&
+        appointment.startAt.getTime() < endAt.getTime() &&
+        appointment.endAt.getTime() > startAt.getTime())
+      .sort((a, b) => a.startAt.getTime() - b.startAt.getTime());
+  }
 }

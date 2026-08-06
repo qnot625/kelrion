@@ -15,6 +15,7 @@ import { LeaveView } from "./views/LeaveView";
 import { LifecycleView } from "./views/LifecycleView";
 import { OnboardingView } from "./views/OnboardingView";
 import { PlatformAdminView } from "./views/PlatformAdminView";
+import { PublicBookingView } from "./views/PublicBookingView";
 import { QueueView } from "./views/QueueView";
 import { RecruitmentView } from "./views/RecruitmentView";
 import { UsersView } from "./views/UsersView";
@@ -31,7 +32,7 @@ const demoModules: readonly ModuleKey[] = [
 ];
 
 export default function App() {
-  const [platformMode, setPlatformMode] = useState(() => window.location.hash.startsWith("#platform"));
+  const [hash, setHash] = useState(() => window.location.hash);
   const stored = useMemo(() => loadSession(), []);
   const [session, setSession] = useState<KlerionSession | null>(stored);
   const [stage, setStage] = useState<Stage>(stored ? "app" : "auth");
@@ -39,7 +40,7 @@ export default function App() {
   const [apiReachable, setApiReachable] = useState<boolean | null>(null);
 
   useEffect(() => {
-    const onHashChange = () => setPlatformMode(window.location.hash.startsWith("#platform"));
+    const onHashChange = () => setHash(window.location.hash);
     window.addEventListener("hashchange", onHashChange);
     return () => window.removeEventListener("hashchange", onHashChange);
   }, []);
@@ -95,7 +96,9 @@ export default function App() {
     setRoute("dashboard");
   }
 
-  if (platformMode) return <PlatformAdminView />;
+  const bookingSlug = hash.startsWith("#book/") ? decodeURIComponent(hash.slice("#book/".length)) : "";
+  if (bookingSlug) return <PublicBookingView tenantSlug={bookingSlug} />;
+  if (hash.startsWith("#platform")) return <PlatformAdminView />;
   if (!session || stage === "auth") return <AuthView onAuth={authenticate} onDemo={openDemo} />;
   if (stage === "onboarding") return <OnboardingView onComplete={() => setStage("app")} />;
 

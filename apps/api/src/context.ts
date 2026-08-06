@@ -12,9 +12,11 @@ import {
   InMemoryAppointmentRepository,
   InMemoryBranchRepository,
   InMemoryServiceRepository,
+  InMemoryWaitlistRepository,
   type AppointmentRepository,
   type BranchRepository,
   type ServiceRepository,
+  type WaitlistRepository,
 } from "@adminops/branch-flow";
 import {
   connectPostgres,
@@ -22,6 +24,7 @@ import {
   PostgresAuditLog,
   PostgresBranchRepository,
   PostgresServiceRepository,
+  PostgresWaitlistRepository,
   PostgresControlPlaneRepository,
   PostgresTenantRepository,
   PostgresUserRepository,
@@ -51,6 +54,7 @@ export interface AppContext {
   appointmentService: AppointmentService;
   branchRepository: BranchRepository;
   serviceRepository: ServiceRepository;
+  waitlistRepository: WaitlistRepository;
   workforceLifecycleService: WorkforceLifecycleService;
   customerCaseService: CustomerCaseService;
   executiveSummaryService: ExecutiveSummaryService;
@@ -72,13 +76,19 @@ function assemble(
   appointmentRepository: AppointmentRepository,
   branchRepository: BranchRepository,
   serviceRepository: ServiceRepository,
+  waitlistRepository: WaitlistRepository,
   workforceLifecycleRepository: WorkforceLifecycleRepository,
   customerIntelligenceRepository: CustomerIntelligenceRepository,
   controlPlaneRepository: ControlPlaneRepository,
   auditLog: AuditLog,
   close: () => Promise<void>,
 ): AppContext {
-  const appointmentService = new AppointmentService(appointmentRepository);
+  const appointmentService = new AppointmentService(
+    appointmentRepository,
+    branchRepository,
+    serviceRepository,
+    waitlistRepository,
+  );
   const authService = new AuthService(userRepository, resolveTokenSecret("SESSION_TOKEN_SECRET"));
   const controlPlaneService = new ControlPlaneService(controlPlaneRepository, tenantRepository, userRepository);
   return {
@@ -94,6 +104,7 @@ function assemble(
     appointmentService,
     branchRepository,
     serviceRepository,
+    waitlistRepository,
     workforceLifecycleService: new WorkforceLifecycleService(workforceLifecycleRepository),
     customerCaseService: new CustomerCaseService(customerIntelligenceRepository),
     executiveSummaryService: new ExecutiveSummaryService(customerIntelligenceRepository, appointmentService),
@@ -110,6 +121,7 @@ export function createAppContext(): AppContext {
     new InMemoryAppointmentRepository(),
     new InMemoryBranchRepository(),
     new InMemoryServiceRepository(),
+    new InMemoryWaitlistRepository(),
     new InMemoryWorkforceLifecycleRepository(),
     new InMemoryCustomerIntelligenceRepository(),
     new InMemoryControlPlaneRepository(),
@@ -127,6 +139,7 @@ export async function createPostgresAppContext(connectionString: string): Promis
     new PostgresAppointmentRepository(db),
     new PostgresBranchRepository(db),
     new PostgresServiceRepository(db),
+    new PostgresWaitlistRepository(db),
     new PostgresWorkforceLifecycleRepository(db),
     new PostgresCustomerIntelligenceRepository(db),
     new PostgresControlPlaneRepository(db),

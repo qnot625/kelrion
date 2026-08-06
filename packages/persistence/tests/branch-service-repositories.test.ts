@@ -2,7 +2,6 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { PGlite } from "@electric-sql/pglite";
 import { drizzle } from "drizzle-orm/pglite";
-import { AppointmentService } from "@adminops/branch-flow";
 import type { Database } from "../src/database.js";
 import * as schema from "../src/schema.js";
 import { runMigrations } from "../src/connect.js";
@@ -112,15 +111,21 @@ test("persists services, requirements, branch mappings and branch-scoped capacit
   await services.assignServiceToBranch(tenant.id, first.id, created.service.id);
   await services.assignServiceToBranch(tenant.id, second.id, created.service.id);
 
-  const appointments = new AppointmentService(new PostgresAppointmentRepository(db));
-  await appointments.book({
+  const appointments = new PostgresAppointmentRepository(db);
+  const bookedAt = new Date("2026-08-01T08:00:00Z");
+  await appointments.save({
+    id: "00000000-0000-4000-8000-000000000001",
     tenantId: tenant.id,
     branchId: first.id,
     serviceId: created.service.id,
     customerEmail: "visitor@example.com",
     serviceName: created.service.name,
+    customerMetadata: {},
     startAt: new Date("2026-08-20T09:00:00Z"),
     endAt: new Date("2026-08-20T09:30:00Z"),
+    status: "booked",
+    createdAt: bookedAt,
+    updatedAt: bookedAt,
   });
 
   const aggregates = await branches.getBranchCapacityAggregates(tenant.id, created.service.id);

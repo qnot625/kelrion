@@ -11,6 +11,7 @@ import {
   PostgresControlPlaneRepository,
   PostgresBranchRepository,
   PostgresServiceRepository,
+  PostgresWaitlistRepository,
   PostgresTenantRepository,
   PostgresUserRepository,
   runMigrations,
@@ -37,7 +38,15 @@ async function postgresBackedContext(): Promise<AppContext> {
   const tenantRepository = new PostgresTenantRepository(db);
   const userRepository = new PostgresUserRepository(db);
   const controlPlaneRepository = new PostgresControlPlaneRepository(db);
-  const appointmentService = new AppointmentService(new PostgresAppointmentRepository(db));
+  const branchRepository = new PostgresBranchRepository(db);
+  const serviceRepository = new PostgresServiceRepository(db);
+  const waitlistRepository = new PostgresWaitlistRepository(db);
+  const appointmentService = new AppointmentService(
+    new PostgresAppointmentRepository(db),
+    branchRepository,
+    serviceRepository,
+    waitlistRepository,
+  );
   const customerIntelligenceRepository = new PostgresCustomerIntelligenceRepository(db);
 
   return {
@@ -55,8 +64,9 @@ async function postgresBackedContext(): Promise<AppContext> {
       userRepository,
     ),
     appointmentService,
-    branchRepository: new PostgresBranchRepository(db),
-    serviceRepository: new PostgresServiceRepository(db),
+    branchRepository,
+    serviceRepository,
+    waitlistRepository,
     workforceLifecycleService: new WorkforceLifecycleService(
       new PostgresWorkforceLifecycleRepository(db),
     ),

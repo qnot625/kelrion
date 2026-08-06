@@ -234,11 +234,41 @@ export const appointments = pgTable(
     endAt: timestamp("end_at", { withTimezone: true }).notNull(),
     status: text("status").notNull().default("booked"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
     index("appointments_tenant_start_idx").on(table.tenantId, table.startAt),
     index("appointments_tenant_branch_idx").on(table.tenantId, table.branchId),
     index("appointments_tenant_service_idx").on(table.tenantId, table.serviceId),
+  ],
+);
+
+export const appointmentWaitlists = pgTable(
+  "appointment_waitlists",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
+    branchId: uuid("branch_id").notNull().references(() => branches.id, { onDelete: "cascade" }),
+    serviceId: uuid("service_id").notNull().references(() => services.id, { onDelete: "cascade" }),
+    customerEmail: text("customer_email").notNull(),
+    customerMetadata: jsonb("customer_metadata").$type<Record<string, unknown>>().notNull().default({}),
+    desiredStartAt: timestamp("desired_start_at", { withTimezone: true }),
+    desiredEndAt: timestamp("desired_end_at", { withTimezone: true }),
+    queuePosition: integer("queue_position").notNull(),
+    status: text("status").notNull().default("waiting"),
+    promotedAppointmentId: uuid("promoted_appointment_id").references(() => appointments.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("appointment_waitlists_tenant_created_idx").on(table.tenantId, table.createdAt),
+    index("appointment_waitlists_queue_idx").on(
+      table.tenantId,
+      table.branchId,
+      table.serviceId,
+      table.status,
+      table.queuePosition,
+    ),
   ],
 );
 
@@ -264,6 +294,7 @@ export const auditEvents = pgTable(
 export const tenantsRelations = relations(tenants, ({ many }) => ({
   users: many(users),
   appointments: many(appointments),
+  appointmentWaitlists: many(appointmentWaitlists),
   auditEvents: many(auditEvents),
   subscriptions: many(organisationSubscriptions),
   invoices: many(billingInvoices),
