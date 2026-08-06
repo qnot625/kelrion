@@ -33,6 +33,39 @@ jobs:
         run: |
           set -euo pipefail
           if [ -d .port-patch-v2 ]; then
+            cat > /tmp/chunks.sha256 <<'HASHES'
+          eb31c71308c9416192faa7c9bafea6d93918571cdc8660d8a531a0119bd30313  .port-patch-v2/chunk_000
+          19f5a2a594c13cd05267762ca9f88f6e5702e8344aeb78433632ce2e9513e925  .port-patch-v2/chunk_001
+          3d7451a8867f3129bdcf232268286d97ea0aab3bf7b2ea55b285900f79e16473  .port-patch-v2/chunk_002
+          ada8b399141c49d8c1bdecf54112f611746910f60714f39ea68ab639ab81ff5b  .port-patch-v2/chunk_003
+          9c636e1cde03eeb1c729654d7d193d9fffcccc5de6a3a12e9490596f39b0c1ba  .port-patch-v2/chunk_004
+          448c1d0d8ac6bfa751312ea9462b9ab3417f353d1749645f150bca39609fb479  .port-patch-v2/chunk_005
+          6388cc7ac528bdc3697faf1ff3f209394b78ee7b5fe9ae8ed550332ce406c492  .port-patch-v2/chunk_006
+          bc8deb085eb6944b4be2ef4dd032c751f3292f119db3f4f27bce363f94dcabf6  .port-patch-v2/chunk_007
+          1c67061c50ac982018a5acadb7590d0daf1cda6c0bdf6103781e1c77c040c9fa  .port-patch-v2/chunk_008
+          611af850a2fa3dcacfbe48ff9466a74dec27ada153e49b5fe97cd398a771e215  .port-patch-v2/chunk_009
+          97d4bf4dfcd5de802b8de9abde005e0f684ae2108b89f737692cfbd93642991a  .port-patch-v2/chunk_010
+          9eff0962bf99ddf08991b30d82bb4e7a6e15470875ae6e5dc7c66e6e76ec6ffc  .port-patch-v2/chunk_011
+          f964ab1cc58cb65a0a79f25c3590f0a15c907655c17507fffb0ea7f06ffcb1b7  .port-patch-v2/chunk_012
+          c3a032b804dd9a99e4c6b7cf783356cf7cba2a2989c9b99a6bdee0a1fa4cfd18  .port-patch-v2/chunk_013
+          cf0531a4323e1ad7cf206c5111c927466aa9050a99f7d281c279fe0b34e99e93  .port-patch-v2/chunk_014
+          33d0b58690d8a32fea3e98076ff2548795b04423d882d755823dc2f97eb4d064  .port-patch-v2/chunk_015
+          8286fcddc7a805bddb312ee339489769f8510e920409ef4b14c1ce6ef3f0ef25  .port-patch-v2/chunk_016
+          616120a54a07dc78d4e5d24419b2142d6bd7da7fc0b55574782c27cd0bc02d19  .port-patch-v2/chunk_017
+          186e8ae5ddb155802d23168f78e6c5a0a606c37fbab26e376a4eac02c8087192  .port-patch-v2/chunk_018
+          54432b9c32d0936bda435f05f015927e37084d68565acf40d8e51f11cf550fdf  .port-patch-v2/chunk_019
+          345039f46844617bcdb7d63bb05fecfbaffc2d6f189241d73f382e0fd4561315  .port-patch-v2/chunk_020
+          4375b9e75ed2689041950a9e5e9702760d2d54630effb52ed5a1a83d323d8b0e  .port-patch-v2/chunk_021
+          9673b5fec5a0506c539f7e3c8070816c41e622e590eceb90057fbe664b8e62ad  .port-patch-v2/chunk_022
+          f434045315ade5e56fc3f0361a91f55921a466f971d43643be24e63db23ba35b  .port-patch-v2/chunk_023
+          0a5d0b4b08a385ea60746d9a4244a9513be22408b7b3fabde1845149173032bd  .port-patch-v2/chunk_024
+          3a10e96314e5294a07e871519517ffa386468195ad70a301aa867c75724719f8  .port-patch-v2/chunk_025
+          8d7c6f530146c2c4c884826205310ee1b32643114b09bf154e18b4406ceff9f1  .port-patch-v2/chunk_026
+          2fca3f7cd195d42950d420cf7db20419abf9bfb4edcedb6cf3d08d8e89edd55a  .port-patch-v2/chunk_027
+          366bd36974a4b0a78a10fe5d740cb92ba24717f586c3d4489d938bf078b97de3  .port-patch-v2/chunk_028
+          HASHES
+            sed -i 's/^          //' /tmp/chunks.sha256
+            sha256sum --check --strict /tmp/chunks.sha256
             cat .port-patch-v2/chunk_* > /tmp/feature-port.patch.gz.b64
             test "$(wc -c < /tmp/feature-port.patch.gz.b64)" -eq 56036
             base64 --decode /tmp/feature-port.patch.gz.b64 > /tmp/feature-port.patch.gz
