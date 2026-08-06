@@ -28,6 +28,7 @@ jobs:
 
           git config user.name "Klerion Integration Bot"
           git config user.email "actions@users.noreply.github.com"
+          git remote set-url origin "https://x-access-token:${PUSH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
           git fetch origin '+refs/heads/*:refs/remotes/origin/*'
           git checkout -B integration/all-branches origin/main
 
@@ -72,6 +73,4 @@ jobs:
             printf ' - %s\n' "${skipped_branches[@]:-none}"
           } | tee /tmp/reconciliation-summary.txt
 
-          git push --force \
-            "https://x-access-token:${PUSH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" \
-            HEAD:refs/heads/integration/all-branches
+          git push --force origin HEAD:refs/heads/integration/all-branches
