@@ -1,0 +1,49 @@
+name: Apply reviewed feature port patch
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: startsWith(github.head_ref, 'port/') && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out feature branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Detect staged patch
+        id: state
+        run: |
+          if [ -d .port-patch ]; then
+            echo "apply=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "apply=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Apply reviewed patch
+        if: steps.state.outputs.apply == 'true'
+        run: |
+          set -euo pipefail
+          cat .port-patch/part_* > /tmp/feature-port.patch.gz.b64
+          base64 --decode /tmp/feature-port.patch.gz.b64 | gzip --decompress > /tmp/feature-port.patch
+          git apply --check --binary /tmp/feature-port.patch
+          git apply --index --binary /tmp/feature-port.patch
+          rm -rf .port-patch
+          git add -A
+
+      - name: Commit applied feature port
+        if: steps.state.outputs.apply == 'true'
+        run: |
+          set -euo pipefail
+          git config user.name "Klerion Integration Bot"
+          git config user.email "actions@users.noreply.github.com"
+          git commit -m "Apply reviewed feature port"
+          git push origin HEAD:${{ github.head_ref }}
