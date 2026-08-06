@@ -1,0 +1,49 @@
+name: Build Klerion handover PDF
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  build-handover:
+    if: github.head_ref == 'docs/project-handover-manual'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out handover branch
+        uses: actions/checkout@v4
+        with:
+          ref: docs/project-handover-manual
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install document tooling
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libreoffice-writer ghostscript
+          python -m pip install --upgrade pip
+          python -m pip install python-docx
+
+      - name: Reassemble generator and build PDF
+        run: |
+          cat .handover-generator/part_* > /tmp/create_klerion_handover.py
+          sed -i "s#/mnt/data/#${RUNNER_TEMP}/#g" /tmp/create_klerion_handover.py
+          python /tmp/create_klerion_handover.py
+          mkdir -p docs
+          libreoffice --headless --convert-to pdf --outdir "${RUNNER_TEMP}" "${RUNNER_TEMP}/Klerion_Project_Handover_Manual.docx"
+          gs -sDEVICE=pdfwrite -dCompatibilityLevel=1.5 -dPDFSETTINGS=/ebook -dNOPAUSE -dQUIET -dBATCH \
+            -sOutputFile=docs/KLERION_PROJECT_HANDOVER_MANUAL.pdf \
+            "${RUNNER_TEMP}/Klerion_Project_Handover_Manual.pdf"
+          test -s docs/KLERION_PROJECT_HANDOVER_MANUAL.pdf
+          pdfinfo docs/KLERION_PROJECT_HANDOVER_MANUAL.pdf | grep 'Pages: *34'
+
+      - name: Remove generator sources and commit PDF
+        run: |
+          rm -rf .handover-generator
+          git config user.name "Klerion Documentation Bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add docs/KLERION_PROJECT_HANDOVER_MANUAL.pdf .handover-generator
+          git commit -m "Add comprehensive Klerion project handover PDF"
+          git push origin HEAD:docs/project-handover-manual
