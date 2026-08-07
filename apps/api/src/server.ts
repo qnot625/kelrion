@@ -5,11 +5,13 @@ import { registerModuleEntitlementGuard } from "./plugins/module-entitlement-gua
 import { registerPlatformAdminGuard } from "./plugins/platform-admin-guard.js";
 import { registerTenantContext } from "./plugins/tenant-context.js";
 import { registerAppointmentRoutes, registerPublicAppointmentRoutes } from "./routes/appointments.js";
+import { registerAttendanceRoutes } from "./routes/attendance.js";
 import { registerAuditRoutes } from "./routes/audit.js";
 import { registerAuthRoutes } from "./routes/auth.js";
 import { registerBranchRoutes, registerPublicBranchRoutes } from "./routes/branches.js";
 import { registerControlPlanePublicRoutes } from "./routes/control-plane-public.js";
 import { registerCustomerIntelligenceRoutes } from "./routes/customer-intelligence.js";
+import { registerEmployeeRoutes } from "./routes/employees.js";
 import { registerEntitlementRoutes } from "./routes/entitlements.js";
 import { registerPlatformAdminRoutes } from "./routes/platform-admin.js";
 import { registerPublicServiceRoutes, registerServiceRoutes } from "./routes/services.js";
@@ -73,6 +75,21 @@ export function buildServer(context: AppContext): FastifyInstance {
         registerModuleEntitlementGuard(appointmentsScope, context.controlPlaneService, "appointments");
         registerAppointmentRoutes(appointmentsScope, context.appointmentService, context.auditLog);
         registerWaitlistRoutes(appointmentsScope, context.appointmentService, context.auditLog);
+      });
+
+      protectedScope.register(async (employeeScope) => {
+        registerModuleEntitlementGuard(employeeScope, context.controlPlaneService, "employees");
+        registerEmployeeRoutes(
+          employeeScope,
+          context.employeeService,
+          context.branchRepository,
+          context.userRepository,
+        );
+      });
+
+      protectedScope.register(async (attendanceScope) => {
+        registerModuleEntitlementGuard(attendanceScope, context.controlPlaneService, "attendance");
+        registerAttendanceRoutes(attendanceScope, context.attendanceService);
       });
 
       registerWorkforceLifecycleRoutes(

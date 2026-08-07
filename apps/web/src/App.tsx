@@ -3,6 +3,8 @@ import { availableRoutes, Shell, type RouteKey } from "./components/Shell";
 import { BranchesView } from "./features/branches/BranchesView";
 import { CasesView } from "./features/customer-intelligence/CasesView";
 import { ExecutiveView } from "./features/customer-intelligence/ExecutiveView";
+import { AttendanceView } from "./features/workforce/AttendanceView";
+import { EmployeeDirectoryView } from "./features/workforce/EmployeeDirectoryView";
 import { klerionApi, type AuthenticationRequest } from "./lib/api";
 import { clearSession, loadSession, saveSession, type KlerionSession, type ModuleKey } from "./lib/session";
 import { AppointmentsView } from "./views/AppointmentsView";
@@ -27,6 +29,8 @@ const demoModules: readonly ModuleKey[] = [
   "appointments",
   "queue",
   "notifications",
+  "employees",
+  "attendance",
   "cases",
   "analytics",
 ];
@@ -108,8 +112,8 @@ export default function App() {
     appointments: <AppointmentsView session={session} />,
     queue: <QueueView />,
     notifications: <FoundationView title="Omnichannel notifications" />,
-    employees: <FoundationView title="Employee records and organisation directory" />,
-    attendance: <FoundationView title="Time and attendance" />,
+    employees: <EmployeeDirectoryView session={session} />,
+    attendance: <AttendanceView session={session} />,
     leave: <LeaveView session={session} />,
     lifecycle: <LifecycleView session={session} />,
     forms: <FoundationView title="Dynamic forms" />,

@@ -9,3 +9,5 @@ export * from "./postgres-control-plane-repository.js";
 export * from "./postgres-branch-repository.js";
 export * from "./postgres-service-repository.js";
 export * from "./postgres-waitlist-repository.js";
+export * from "./postgres-employee-repository.js";
+export * from "./postgres-attendance-repository.js";

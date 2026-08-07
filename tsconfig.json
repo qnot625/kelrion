@@ -17,6 +17,9 @@
       "path": "modules/domains/branch-flow"
     },
     {
+      "path": "modules/domains/workforce-core"
+    },
+    {
       "path": "packages/persistence"
     },
     {

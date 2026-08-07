@@ -6,7 +6,7 @@ This document records the controlled integration sequence for preserved feature 
 
 1. Platform control plane and organisation entitlements — completed
 2. Branch and service foundation — completed; advanced scheduling and waitlists — completed
-3. Employee records and attendance — pending
+3. Employee records and attendance — validated; ready to merge
 4. Workforce lifecycle reconciliation — pending
 5. Forms platform — pending
 6. Workflow and approvals — pending

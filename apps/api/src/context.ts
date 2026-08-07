@@ -19,10 +19,23 @@ import {
   type WaitlistRepository,
 } from "@adminops/branch-flow";
 import {
+  AttendanceService,
+  EmployeeService,
+  InMemoryAttendanceCorrectionRepository,
+  InMemoryAttendanceRepository,
+  InMemoryEmployeeRepository,
+  type AttendanceCorrectionRepository,
+  type AttendanceRepository,
+  type EmployeeRepository,
+} from "../../../modules/domains/workforce-core/src/index.js";
+import {
   connectPostgres,
   PostgresAppointmentRepository,
+  PostgresAttendanceCorrectionRepository,
+  PostgresAttendanceRepository,
   PostgresAuditLog,
   PostgresBranchRepository,
+  PostgresEmployeeRepository,
   PostgresServiceRepository,
   PostgresWaitlistRepository,
   PostgresControlPlaneRepository,
@@ -55,6 +68,11 @@ export interface AppContext {
   branchRepository: BranchRepository;
   serviceRepository: ServiceRepository;
   waitlistRepository: WaitlistRepository;
+  employeeRepository: EmployeeRepository;
+  employeeService: EmployeeService;
+  attendanceRepository: AttendanceRepository;
+  attendanceCorrectionRepository: AttendanceCorrectionRepository;
+  attendanceService: AttendanceService;
   workforceLifecycleService: WorkforceLifecycleService;
   customerCaseService: CustomerCaseService;
   executiveSummaryService: ExecutiveSummaryService;
@@ -77,6 +95,9 @@ function assemble(
   branchRepository: BranchRepository,
   serviceRepository: ServiceRepository,
   waitlistRepository: WaitlistRepository,
+  employeeRepository: EmployeeRepository,
+  attendanceRepository: AttendanceRepository,
+  attendanceCorrectionRepository: AttendanceCorrectionRepository,
   workforceLifecycleRepository: WorkforceLifecycleRepository,
   customerIntelligenceRepository: CustomerIntelligenceRepository,
   controlPlaneRepository: ControlPlaneRepository,
@@ -91,6 +112,13 @@ function assemble(
   );
   const authService = new AuthService(userRepository, resolveTokenSecret("SESSION_TOKEN_SECRET"));
   const controlPlaneService = new ControlPlaneService(controlPlaneRepository, tenantRepository, userRepository);
+  const employeeService = new EmployeeService(employeeRepository, auditLog);
+  const attendanceService = new AttendanceService(
+    employeeRepository,
+    attendanceRepository,
+    attendanceCorrectionRepository,
+    auditLog,
+  );
   return {
     tenantRepository,
     userRepository,
@@ -105,6 +133,11 @@ function assemble(
     branchRepository,
     serviceRepository,
     waitlistRepository,
+    employeeRepository,
+    employeeService,
+    attendanceRepository,
+    attendanceCorrectionRepository,
+    attendanceService,
     workforceLifecycleService: new WorkforceLifecycleService(workforceLifecycleRepository),
     customerCaseService: new CustomerCaseService(customerIntelligenceRepository),
     executiveSummaryService: new ExecutiveSummaryService(customerIntelligenceRepository, appointmentService),
@@ -122,6 +155,9 @@ export function createAppContext(): AppContext {
     new InMemoryBranchRepository(),
     new InMemoryServiceRepository(),
     new InMemoryWaitlistRepository(),
+    new InMemoryEmployeeRepository(),
+    new InMemoryAttendanceRepository(),
+    new InMemoryAttendanceCorrectionRepository(),
     new InMemoryWorkforceLifecycleRepository(),
     new InMemoryCustomerIntelligenceRepository(),
     new InMemoryControlPlaneRepository(),
@@ -140,6 +176,9 @@ export async function createPostgresAppContext(connectionString: string): Promis
     new PostgresBranchRepository(db),
     new PostgresServiceRepository(db),
     new PostgresWaitlistRepository(db),
+    new PostgresEmployeeRepository(db),
+    new PostgresAttendanceRepository(db),
+    new PostgresAttendanceCorrectionRepository(db),
     new PostgresWorkforceLifecycleRepository(db),
     new PostgresCustomerIntelligenceRepository(db),
     new PostgresControlPlaneRepository(db),

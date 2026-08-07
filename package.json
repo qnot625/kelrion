@@ -10,6 +10,7 @@
     "modules/domains/*"
   ],
   "scripts": {
+    "prepare": "node scripts/link-workforce-core.mjs",
     "dev": "npm run dev -w apps/api",
     "dev:web": "corepack pnpm --dir apps/web dev",
     "build": "tsc -b",

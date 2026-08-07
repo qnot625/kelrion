@@ -11,7 +11,16 @@ export type Permission =
   | "lifecycle:manage"
   | "cases:create"
   | "cases:manage"
-  | "analytics:view";
+  | "analytics:view"
+  | "employees:create"
+  | "employees:read"
+  | "employees:update"
+  | "employees:delete"
+  | "employees:manage_hierarchy"
+  | "attendance:clock"
+  | "attendance:read"
+  | "attendance:sync"
+  | "attendance:manage";
 
 const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
   owner: [
@@ -26,6 +35,15 @@ const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     "cases:create",
     "cases:manage",
     "analytics:view",
+    "employees:create",
+    "employees:read",
+    "employees:update",
+    "employees:delete",
+    "employees:manage_hierarchy",
+    "attendance:clock",
+    "attendance:read",
+    "attendance:sync",
+    "attendance:manage",
   ],
   staff: [
     "appointments:book",
@@ -38,12 +56,24 @@ const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     "cases:create",
     "cases:manage",
     "analytics:view",
+    "employees:create",
+    "employees:read",
+    "employees:update",
+    "employees:manage_hierarchy",
+    "attendance:clock",
+    "attendance:read",
+    "attendance:sync",
+    "attendance:manage",
   ],
   member: [
     "appointments:book",
     "leave:request",
     "lifecycle:view",
     "cases:create",
+    "employees:read",
+    "attendance:clock",
+    "attendance:read",
+    "attendance:sync",
   ],
 };
 
@@ -55,9 +85,7 @@ export function permissionsForRoles(roles: readonly string[]): Set<Permission> {
   const permissions = new Set<Permission>();
   for (const role of roles) {
     if (isKnownRole(role)) {
-      for (const permission of ROLE_PERMISSIONS[role]) {
-        permissions.add(permission);
-      }
+      for (const permission of ROLE_PERMISSIONS[role]) permissions.add(permission);
     }
   }
   return permissions;
