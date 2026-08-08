@@ -186,10 +186,16 @@ export function registerWorkflowRoutes(
   });
 
   app.post<{ Params: { id: string } }>("/workflow-tasks/:id/claim", { preHandler: [moduleGuard, requirePermission("workflow:task")] }, async (request, reply) =>
-    handled(reply, async () => reply.send((await workflow.claimTask(request.tenant!.tenantId, request.params.id, request.auth!.userId, request.auth!.roles)).toJSON())));
+    handled(reply, async () => {
+      const task = (await workflow.listTasks(request.tenant!.tenantId)).find((item) => item.id === request.params.id);
+      if (task?.kind === "APPROVAL") throw new WorkflowValidationError("Approval tasks must be handled through the Approvals module");
+      return reply.send((await workflow.claimTask(request.tenant!.tenantId, request.params.id, request.auth!.userId, request.auth!.roles)).toJSON());
+    }));
 
   app.post<{ Params: { id: string } }>("/workflow-tasks/:id/complete", { preHandler: [moduleGuard, requirePermission("workflow:task")] }, async (request, reply) =>
     handled(reply, async () => {
+      const task = (await workflow.listTasks(request.tenant!.tenantId)).find((item) => item.id === request.params.id);
+      if (task?.kind === "APPROVAL") throw new WorkflowValidationError("Approval tasks must be resolved through the Approvals module");
       const body = isRecord(request.body) ? request.body : {};
       const result = await workflow.completeTask({
         tenantId: request.tenant!.tenantId,

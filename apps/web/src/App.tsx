@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { availableRoutes, Shell, type RouteKey } from "./components/Shell";
+import { ApprovalView } from "./features/approvals/ApprovalView";
 import { BranchesView } from "./features/branches/BranchesView";
 import { CasesView } from "./features/customer-intelligence/CasesView";
 import { ExecutiveView } from "./features/customer-intelligence/ExecutiveView";
 import { FormsView } from "./features/forms/FormsView";
 import { AttendanceView } from "./features/workforce/AttendanceView";
 import { EmployeeDirectoryView } from "./features/workforce/EmployeeDirectoryView";
+import { WorkflowView } from "./features/workflow/WorkflowView";
 import { klerionApi, type AuthenticationRequest } from "./lib/api";
 import { clearSession, loadSession, saveSession, type KlerionSession, type ModuleKey } from "./lib/session";
 import { AppointmentsView } from "./views/AppointmentsView";
@@ -32,6 +34,9 @@ const demoModules: readonly ModuleKey[] = [
   "notifications",
   "employees",
   "attendance",
+  "forms",
+  "workflow",
+  "approvals",
   "cases",
   "analytics",
 ];
@@ -118,8 +123,8 @@ export default function App() {
     leave: <LeaveView session={session} />,
     lifecycle: <LifecycleView session={session} />,
     forms: <FormsView session={session} />,
-    workflow: <FoundationView title="Workflow automation" />,
-    approvals: <FoundationView title="Approval management" />,
+    workflow: <WorkflowView session={session} />,
+    approvals: <ApprovalView session={session} />,
     serviceDesk: <FoundationView title="Internal service desk" />,
     cases: <CasesView session={session} />,
     executive: <ExecutiveView session={session} />,

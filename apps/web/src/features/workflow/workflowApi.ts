@@ -33,6 +33,7 @@ export interface ApiWorkflowStep {
     readonly formDefinitionId?: string | null;
   } | null;
   readonly automaticConfig?: { readonly operation: "SET_VARIABLES"; readonly values: Readonly<Record<string, unknown>> } | null;
+  readonly metadata?: Readonly<Record<string, unknown>>;
 }
 
 export interface ApiWorkflowTrigger {

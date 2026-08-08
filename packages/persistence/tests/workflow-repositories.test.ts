@@ -6,6 +6,7 @@ import { WorkflowEngineService, type WorkflowStep } from "@adminops/workflow";
 import {
   PostgresHumanTaskRepository,
   PostgresTenantRepository,
+  PostgresUserRepository,
   PostgresWorkflowDefinitionRepository,
   PostgresWorkflowInstanceRepository,
   runMigrations,
@@ -31,26 +32,30 @@ function steps(): WorkflowStep[] {
 test("Postgres workflow repositories preserve versions, instances and human tasks", async () => {
   const db = await database();
   const tenants = new PostgresTenantRepository(db);
+  const users = new PostgresUserRepository(db);
   const definitions = new PostgresWorkflowDefinitionRepository(db);
   const instances = new PostgresWorkflowInstanceRepository(db);
   const tasks = new PostgresHumanTaskRepository(db);
   const service = new WorkflowEngineService(definitions, instances, tasks);
   const tenant = await tenants.create({ name: "Workflow DB", slug: "workflow-db" });
+  const owner = await users.create({ tenantId: tenant.id, email: "owner@workflow.db", passwordHash: "test", roles: ["owner"] });
+  const starter = await users.create({ tenantId: tenant.id, email: "starter@workflow.db", passwordHash: "test", roles: ["member"] });
+  const staff = await users.create({ tenantId: tenant.id, email: "staff@workflow.db", passwordHash: "test", roles: ["staff"] });
 
-  const definition = await service.createDefinition({ tenantId: tenant.id, name: "Persistent review", steps: steps(), actorUserId: "00000000-0000-4000-8000-000000000001" });
-  await service.publishDefinition(tenant.id, definition.id, "00000000-0000-4000-8000-000000000001");
-  const instance = await service.startWorkflow({ tenantId: tenant.id, definitionId: definition.id, actorUserId: "00000000-0000-4000-8000-000000000002" });
+  const definition = await service.createDefinition({ tenantId: tenant.id, name: "Persistent review", steps: steps(), actorUserId: owner.id });
+  await service.publishDefinition(tenant.id, definition.id, owner.id);
+  const instance = await service.startWorkflow({ tenantId: tenant.id, definitionId: definition.id, actorUserId: starter.id });
   assert.equal(instance.status, "WAITING");
   assert.equal((await instances.findById(tenant.id, instance.id))?.workflowVersion, 1);
-  const task = (await tasks.listForUser(tenant.id, "00000000-0000-4000-8000-000000000003", ["staff"]))[0];
+  const task = (await tasks.listForUser(tenant.id, staff.id, ["staff"]))[0];
   assert.ok(task);
 
-  const updated = await service.updateDefinition({ tenantId: tenant.id, id: definition.id, name: "Persistent review v2", steps: steps(), actorUserId: "00000000-0000-4000-8000-000000000001" });
+  const updated = await service.updateDefinition({ tenantId: tenant.id, id: definition.id, name: "Persistent review v2", steps: steps(), actorUserId: owner.id });
   assert.equal(updated.version, 2);
-  await service.publishDefinition(tenant.id, definition.id, "00000000-0000-4000-8000-000000000001");
+  await service.publishDefinition(tenant.id, definition.id, owner.id);
   assert.deepEqual((await definitions.listPublishedVersions(tenant.id, definition.id)).map((item) => item.version), [2, 1]);
 
-  const result = await service.completeTask({ tenantId: tenant.id, id: task!.id, actorUserId: "00000000-0000-4000-8000-000000000003", actorRoles: ["staff"] });
+  const result = await service.completeTask({ tenantId: tenant.id, id: task!.id, actorUserId: staff.id, actorRoles: ["staff"] });
   assert.equal(result.instance.workflowVersion, 1);
   assert.equal(result.instance.status, "COMPLETED");
 

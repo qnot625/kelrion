@@ -7,6 +7,7 @@
     { "path": "modules/platform/control-plane" },
     { "path": "modules/platform/forms" },
     { "path": "modules/platform/workflow" },
+    { "path": "modules/platform/approvals" },
     { "path": "modules/domains/branch-flow" },
     { "path": "modules/domains/workforce-core" },
     { "path": "packages/persistence" },

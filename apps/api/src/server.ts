@@ -4,6 +4,7 @@ import { registerAuthGuard } from "./plugins/auth-guard.js";
 import { registerModuleEntitlementGuard } from "./plugins/module-entitlement-guard.js";
 import { registerPlatformAdminGuard } from "./plugins/platform-admin-guard.js";
 import { registerTenantContext } from "./plugins/tenant-context.js";
+import { registerApprovalRoutes } from "./routes/approvals.js";
 import { registerAppointmentRoutes, registerPublicAppointmentRoutes } from "./routes/appointments.js";
 import { registerAttendanceRoutes } from "./routes/attendance.js";
 import { registerAuditRoutes } from "./routes/audit.js";
@@ -26,13 +27,7 @@ export function buildServer(context: AppContext): FastifyInstance {
   const app = Fastify({ logger: false });
   app.get("/health", async () => ({ status: "ok" }));
 
-  registerControlPlanePublicRoutes(
-    app,
-    context.controlPlaneService,
-    context.authService,
-    context.platformAdminAuthService,
-    context.auditLog,
-  );
+  registerControlPlanePublicRoutes(app, context.controlPlaneService, context.authService, context.platformAdminAuthService, context.auditLog);
   registerTenantRoutes(app, context.controlPlaneService, context.auditLog);
 
   app.register(async (platformScope) => {
@@ -65,12 +60,7 @@ export function buildServer(context: AppContext): FastifyInstance {
       protectedScope.register(async (branchScope) => {
         registerModuleEntitlementGuard(branchScope, context.controlPlaneService, "branches");
         registerBranchRoutes(branchScope, context.branchRepository, context.auditLog);
-        registerServiceRoutes(
-          branchScope,
-          context.serviceRepository,
-          context.branchRepository,
-          context.auditLog,
-        );
+        registerServiceRoutes(branchScope, context.serviceRepository, context.branchRepository, context.auditLog);
       });
 
       protectedScope.register(async (appointmentsScope) => {
@@ -81,12 +71,7 @@ export function buildServer(context: AppContext): FastifyInstance {
 
       protectedScope.register(async (employeeScope) => {
         registerModuleEntitlementGuard(employeeScope, context.controlPlaneService, "employees");
-        registerEmployeeRoutes(
-          employeeScope,
-          context.employeeService,
-          context.branchRepository,
-          context.userRepository,
-        );
+        registerEmployeeRoutes(employeeScope, context.employeeService, context.branchRepository, context.userRepository);
       });
 
       protectedScope.register(async (attendanceScope) => {
@@ -94,31 +79,11 @@ export function buildServer(context: AppContext): FastifyInstance {
         registerAttendanceRoutes(attendanceScope, context.attendanceService);
       });
 
-      registerWorkforceLifecycleRoutes(
-        protectedScope,
-        context.workforceLifecycleService,
-        context.controlPlaneService,
-        context.auditLog,
-      );
-      registerFormsRoutes(
-        protectedScope,
-        context.formDefinitionService,
-        context.formSubmissionService,
-        context.controlPlaneService,
-        context.workflowEngineService,
-      );
-      registerWorkflowRoutes(
-        protectedScope,
-        context.workflowEngineService,
-        context.controlPlaneService,
-      );
-      registerCustomerIntelligenceRoutes(
-        protectedScope,
-        context.customerCaseService,
-        context.executiveSummaryService,
-        context.controlPlaneService,
-        context.auditLog,
-      );
+      registerWorkforceLifecycleRoutes(protectedScope, context.workforceLifecycleService, context.controlPlaneService, context.auditLog);
+      registerFormsRoutes(protectedScope, context.formDefinitionService, context.formSubmissionService, context.controlPlaneService, context.workflowEngineService);
+      registerWorkflowRoutes(protectedScope, context.workflowEngineService, context.controlPlaneService);
+      registerApprovalRoutes(protectedScope, context.approvalEngineService, context.workflowEngineService, context.controlPlaneService);
+      registerCustomerIntelligenceRoutes(protectedScope, context.customerCaseService, context.executiveSummaryService, context.controlPlaneService, context.auditLog);
     });
   });
 
