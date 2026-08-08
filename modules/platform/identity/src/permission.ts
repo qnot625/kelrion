@@ -22,7 +22,11 @@ export type Permission =
   | "attendance:sync"
   | "attendance:manage"
   | "forms:submit"
-  | "forms:manage";
+  | "forms:manage"
+  | "workflow:view"
+  | "workflow:start"
+  | "workflow:task"
+  | "workflow:manage";
 
 const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
   owner: [
@@ -32,6 +36,7 @@ const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     "employees:create", "employees:read", "employees:update", "employees:delete", "employees:manage_hierarchy",
     "attendance:clock", "attendance:read", "attendance:sync", "attendance:manage",
     "forms:submit", "forms:manage",
+    "workflow:view", "workflow:start", "workflow:task", "workflow:manage",
   ],
   staff: [
     "appointments:book", "appointments:manage", "appointments:view",
@@ -40,11 +45,13 @@ const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     "employees:create", "employees:read", "employees:update", "employees:manage_hierarchy",
     "attendance:clock", "attendance:read", "attendance:sync", "attendance:manage",
     "forms:submit", "forms:manage",
+    "workflow:view", "workflow:start", "workflow:task", "workflow:manage",
   ],
   member: [
     "appointments:book", "leave:request", "lifecycle:view", "cases:create",
     "employees:read", "attendance:clock", "attendance:read", "attendance:sync",
     "forms:submit",
+    "workflow:view", "workflow:start", "workflow:task",
   ],
 };
 

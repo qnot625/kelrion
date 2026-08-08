@@ -1,0 +1,167 @@
+name: Final workflow port corrections
+
+on:
+  push:
+    branches:
+      - port/workflow-engine
+    paths:
+      - .github/workflows/final-workflow-port-corrections.yml
+
+permissions:
+  contents: write
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: port/workflow-engine
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Apply idempotent corrections
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          instance = Path('modules/platform/workflow/src/instance.ts')
+          text = instance.read_text()
+          old = '''  isEligible(userId: string, roles: readonly string[]): boolean {
+    if (this.data.assigneeUserId) return this.data.assigneeUserId === userId;
+    const userMatch = this.data.candidateUserIds.length === 0 || this.data.candidateUserIds.includes(userId);
+    const roleMatch = this.data.candidateRoles.length === 0 || roles.some((role) => this.data.candidateRoles.includes(role));
+    return userMatch && roleMatch;
+  }'''
+          new = '''  isEligible(userId: string, roles: readonly string[]): boolean {
+    if (this.data.assigneeUserId) return this.data.assigneeUserId === userId;
+    if (this.data.candidateUserIds.length === 0 && this.data.candidateRoles.length === 0) return true;
+    return this.data.candidateUserIds.includes(userId)
+      || roles.some((role) => this.data.candidateRoles.includes(role));
+  }'''
+          if old in text:
+              instance.write_text(text.replace(old, new))
+          elif new not in text:
+              raise SystemExit('Unexpected HumanTask.isEligible implementation')
+
+          service = Path('modules/platform/workflow/src/service.ts')
+          text = service.read_text()
+          old = '''    const definition = await this.getPublishedDefinition(input.tenantId, input.definitionId, input.version);
+    const sourceType = input.sourceType ?? "MANUAL";
+    if (input.sourceReferenceId) {'''
+          new = '''    const definition = await this.getPublishedDefinition(input.tenantId, input.definitionId, input.version);
+    const sourceType = input.sourceType ?? "MANUAL";
+    if (!definition.triggers.some((trigger) => trigger.type === sourceType)) {
+      throw new WorkflowValidationError(`Workflow '${definition.id}' does not allow ${sourceType} starts`);
+    }
+    if (input.sourceReferenceId) {'''
+          if old in text:
+              service.write_text(text.replace(old, new))
+          elif new not in text:
+              raise SystemExit('Unexpected startWorkflow trigger gate')
+
+          view = Path('apps/web/src/features/workflow/WorkflowView.tsx')
+          text = view.read_text()
+          bad = '''task.assigneeUserId === session.userId ? "Me" : task.assigneeUserId?.slice(0, 8) ?? task.candidateRoles.join(", ") || "Eligible user"'''
+          fixed = '''task.assigneeUserId === session.userId ? "Me" : ((task.assigneeUserId?.slice(0, 8) ?? task.candidateRoles.join(", ")) || "Eligible user")'''
+          if bad in text:
+              text = text.replace(bad, fixed)
+          elif fixed not in text:
+              raise SystemExit('Unexpected task assignee rendering expression')
+          old = '''definition.status === "PUBLISHED" && <button className="primary" onClick={() => { setStarting(definition); setVariablesText("{}"); }}><Play size={14} /> Start</button>'''
+          new = '''definition.status === "PUBLISHED" && definition.triggers.some((trigger) => trigger.type === "MANUAL") && <button className="primary" onClick={() => { setStarting(definition); setVariablesText("{}"); }}><Play size={14} /> Start</button>'''
+          if old in text:
+              text = text.replace(old, new)
+          elif new not in text:
+              raise SystemExit('Unexpected manual start control')
+          view.write_text(text)
+
+          builder = Path('apps/web/src/features/workflow/WorkflowBuilder.tsx')
+          text = builder.read_text()
+          old = '''  const firstTrigger = initial?.triggers[0] ?? { type: "MANUAL" as const };'''
+          new = '''  const firstTrigger: ApiWorkflowTrigger = initial?.triggers[0] ?? { type: "MANUAL" };'''
+          if old in text:
+              text = text.replace(old, new)
+          elif new not in text:
+              raise SystemExit('Unexpected firstTrigger declaration')
+          old_value = '''value: event.target.value } } : item) })} />'''
+          new_value = '''value: (item.condition?.operator === "GREATER_THAN" || item.condition?.operator === "LESS_THAN") && event.target.value !== "" ? Number(event.target.value) : event.target.value } } : item) })} />'''
+          if old_value in text:
+              text = text.replace(old_value, new_value, 1)
+          elif new_value not in text:
+              raise SystemExit('Unexpected workflow condition value editor')
+          text = text.replace('{ ...step.taskConfig, candidateRoles:', '{ ...(step.taskConfig ?? {}), candidateRoles:')
+          text = text.replace('{ ...step.taskConfig, dueInMinutes:', '{ ...(step.taskConfig ?? {}), dueInMinutes:')
+          builder.write_text(text)
+
+          api_test = Path('apps/api/tests/workflow.test.ts')
+          text = api_test.read_text()
+          if 'import type { ModuleKey } from "@adminops/control-plane";' not in text:
+              text = text.replace('import { test } from "node:test";\n', 'import { test } from "node:test";\nimport type { ModuleKey } from "@adminops/control-plane";\n')
+          text = text.replace('enabledModules: string[] = ["workflow"]', 'enabledModules: ModuleKey[] = ["workflow"]')
+          text = text.replace('const app = await setup("Automation Co", "automation-co");', 'const app = await setup("Automation Co", "automation-co", ["forms", "workflow"]);')
+          api_test.write_text(text)
+
+          domain_test = Path('modules/platform/workflow/tests/workflow.test.ts')
+          text = domain_test.read_text()
+          marker = 'test("manual starts require an explicit MANUAL trigger"'
+          if marker not in text:
+              text += '''\n\ntest("manual starts require an explicit MANUAL trigger", async () => {
+  const { service } = engine();
+  const definition = await service.createDefinition({
+    tenantId: "tenant-a",
+    name: "Event only",
+    steps: [
+      { id: "start", name: "Start", type: "START", transitions: [{ targetStepId: "end" }] },
+      { id: "end", name: "End", type: "END", transitions: [] },
+    ],
+    triggers: [{ type: "EVENT", eventName: "request.created" }],
+    actorUserId: "owner-a",
+  });
+  await service.publishDefinition("tenant-a", definition.id, "owner-a");
+  await assert.rejects(
+    () => service.startWorkflow({ tenantId: "tenant-a", definitionId: definition.id, actorUserId: "member-a" }),
+    /does not allow MANUAL starts/,
+  );
+});\n'''
+              domain_test.write_text(text)
+          PY
+          npm install --package-lock-only --ignore-scripts
+      - name: Install exact workspace graph
+        run: npm ci
+      - name: Backend type-check
+        run: npm run typecheck
+      - name: Backend lint
+        run: npm run lint
+      - name: Backend and package tests
+        run: npm test
+      - name: Backend production build
+        run: npm run build
+      - name: Company Console type-check
+        run: npm --workspace apps/web run typecheck
+      - name: Company Console static validation
+        run: npm --workspace apps/web run validate
+      - name: Company Console production build
+        run: npm --workspace apps/web run build
+      - name: Record validated port and clean helper workflows
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('docs/FEATURE_PORTING_STATUS.md')
+          text = path.read_text()
+          text = text.replace('6. Workflow and approvals — pending', '6. Workflow engine — completed; approval engine — pending')
+          path.write_text(text)
+          PY
+          git rm -f .github/workflows/refresh-workflow-port-lockfile.yml 2>/dev/null || true
+          git rm -f .github/workflows/fix-workflow-port-source.yml 2>/dev/null || true
+          git rm -f .github/workflows/finalize-workflow-port.yml 2>/dev/null || true
+          git rm -f .github/workflows/validate-workflow-port.yml 2>/dev/null || true
+          git rm -f .github/workflows/harden-workflow-port.yml 2>/dev/null || true
+          git rm -f .github/workflows/final-workflow-port-corrections.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package-lock.json modules/platform/workflow/src/instance.ts modules/platform/workflow/src/service.ts modules/platform/workflow/tests/workflow.test.ts apps/api/tests/workflow.test.ts apps/web/src/features/workflow/WorkflowView.tsx apps/web/src/features/workflow/WorkflowBuilder.tsx docs/FEATURE_PORTING_STATUS.md
+          git commit -m "Finalize validated workflow engine port"
+          git push origin HEAD:port/workflow-engine

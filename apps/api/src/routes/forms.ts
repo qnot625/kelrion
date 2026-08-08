@@ -8,6 +8,7 @@ import {
   type FormFieldProps,
   type SubmissionService,
 } from "@adminops/forms";
+import type { WorkflowEngineService } from "@adminops/workflow";
 import { hasPermission } from "@adminops/identity";
 import type { ControlPlaneService } from "@adminops/control-plane";
 import { requireModule } from "../plugins/module-entitlement.js";
@@ -85,6 +86,7 @@ export function registerFormsRoutes(
   forms: FormDefinitionService,
   submissions: SubmissionService,
   controlPlane: ControlPlaneService,
+  workflow?: WorkflowEngineService,
 ): void {
   const moduleGuard = requireModule(controlPlane, "forms");
 
@@ -217,6 +219,29 @@ export function registerFormsRoutes(
         responses: body.responses === undefined ? undefined : parseResponses(body.responses),
         metadata: metadata(body.metadata),
       });
+      if (workflow) {
+        const responseVariables = Object.fromEntries(result.responses.map((response) => [response.fieldId, response.value]));
+        try {
+          await workflow.triggerFormSubmission({
+            tenantId: result.tenantId,
+            formDefinitionId: result.formDefinitionId,
+            formSubmissionId: result.id,
+            actorUserId: request.auth!.userId,
+            variables: {
+              ...responseVariables,
+              submission: {
+                id: result.id,
+                formDefinitionId: result.formDefinitionId,
+                formVersion: result.formVersion,
+                submittedByUserId: result.metadata.submittedByUserId,
+                submittedAt: result.submittedAt?.toISOString() ?? null,
+              },
+            },
+          });
+        } catch (error) {
+          request.log.error({ err: error, formSubmissionId: result.id }, "Could not trigger workflow from form submission");
+        }
+      }
       return reply.send(result.toJSON());
     }));
 

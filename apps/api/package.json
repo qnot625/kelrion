@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "node --import tsx --watch src/index.ts",
     "start": "node --import tsx src/index.ts",
-    "test": "node --import tsx --test tests/health.test.ts tests/control-plane.test.ts tests/vertical-slice.test.ts tests/rbac.test.ts tests/audit.test.ts tests/user-roles.test.ts tests/workforce-lifecycle.test.ts tests/workforce-lifecycle-employee-links.test.ts tests/workforce-lifecycle-reconciliation-postgres.test.ts tests/customer-intelligence.test.ts tests/postgres-integration.test.ts tests/branches.test.ts tests/services.test.ts tests/appointment-scheduling.test.ts tests/workforce-core.test.ts tests/forms.test.ts tests/forms-postgres.test.ts ../../modules/domains/workforce-core/tests/employee.test.ts ../../modules/domains/workforce-core/tests/attendance.test.ts"
+    "test": "node --import tsx --test tests/health.test.ts tests/control-plane.test.ts tests/vertical-slice.test.ts tests/rbac.test.ts tests/audit.test.ts tests/user-roles.test.ts tests/workforce-lifecycle.test.ts tests/workforce-lifecycle-employee-links.test.ts tests/workforce-lifecycle-reconciliation-postgres.test.ts tests/customer-intelligence.test.ts tests/postgres-integration.test.ts tests/branches.test.ts tests/services.test.ts tests/appointment-scheduling.test.ts tests/workforce-core.test.ts tests/forms.test.ts tests/forms-postgres.test.ts tests/workflow.test.ts tests/workflow-postgres.test.ts ../../modules/domains/workforce-core/tests/employee.test.ts ../../modules/domains/workforce-core/tests/attendance.test.ts ../../modules/platform/workflow/tests/workflow.test.ts"
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.2.15",
@@ -20,6 +20,7 @@
     "@adminops/identity": "*",
     "@adminops/persistence": "*",
     "@adminops/tenancy": "*",
+    "@adminops/workflow": "*",
     "fastify": "^5.1.0"
   }
 }

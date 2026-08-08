@@ -13,6 +13,15 @@ import {
   type FormDefinitionRepository,
   type FormSubmissionRepository,
 } from "@adminops/forms";
+import {
+  InMemoryHumanTaskRepository,
+  InMemoryWorkflowDefinitionRepository,
+  InMemoryWorkflowInstanceRepository,
+  WorkflowEngineService,
+  type HumanTaskRepository,
+  type WorkflowDefinitionRepository,
+  type WorkflowInstanceRepository,
+} from "@adminops/workflow";
 import { AuthService, InMemoryUserRepository, type UserRepository } from "@adminops/identity";
 import { InMemoryTenantRepository, type TenantRepository } from "@adminops/tenancy";
 import {
@@ -46,8 +55,11 @@ import {
   PostgresEmployeeRepository,
   PostgresFormDefinitionRepository,
   PostgresFormSubmissionRepository,
+  PostgresHumanTaskRepository,
   PostgresServiceRepository,
   PostgresWaitlistRepository,
+  PostgresWorkflowDefinitionRepository,
+  PostgresWorkflowInstanceRepository,
   PostgresControlPlaneRepository,
   PostgresTenantRepository,
   PostgresUserRepository,
@@ -88,6 +100,10 @@ export interface AppContext {
   formSubmissionRepository: FormSubmissionRepository;
   formDefinitionService: FormDefinitionService;
   formSubmissionService: SubmissionService;
+  workflowDefinitionRepository: WorkflowDefinitionRepository;
+  workflowInstanceRepository: WorkflowInstanceRepository;
+  humanTaskRepository: HumanTaskRepository;
+  workflowEngineService: WorkflowEngineService;
   customerCaseService: CustomerCaseService;
   executiveSummaryService: ExecutiveSummaryService;
   auditLog: AuditLog;
@@ -115,6 +131,9 @@ function assemble(
   workforceLifecycleRepository: WorkforceLifecycleRepository,
   formDefinitionRepository: FormDefinitionRepository,
   formSubmissionRepository: FormSubmissionRepository,
+  workflowDefinitionRepository: WorkflowDefinitionRepository,
+  workflowInstanceRepository: WorkflowInstanceRepository,
+  humanTaskRepository: HumanTaskRepository,
   customerIntelligenceRepository: CustomerIntelligenceRepository,
   controlPlaneRepository: ControlPlaneRepository,
   auditLog: AuditLog,
@@ -137,6 +156,12 @@ function assemble(
   );
   const formDefinitionService = new FormDefinitionService(formDefinitionRepository, auditLog);
   const formSubmissionService = new SubmissionService(formSubmissionRepository, formDefinitionRepository, auditLog);
+  const workflowEngineService = new WorkflowEngineService(
+    workflowDefinitionRepository,
+    workflowInstanceRepository,
+    humanTaskRepository,
+    auditLog,
+  );
   return {
     tenantRepository,
     userRepository,
@@ -161,6 +186,10 @@ function assemble(
     formSubmissionRepository,
     formDefinitionService,
     formSubmissionService,
+    workflowDefinitionRepository,
+    workflowInstanceRepository,
+    humanTaskRepository,
+    workflowEngineService,
     customerCaseService: new CustomerCaseService(customerIntelligenceRepository),
     executiveSummaryService: new ExecutiveSummaryService(customerIntelligenceRepository, appointmentService),
     auditLog,
@@ -183,6 +212,9 @@ export function createAppContext(): AppContext {
     new InMemoryWorkforceLifecycleRepository(),
     new InMemoryFormDefinitionRepository(),
     new InMemoryFormSubmissionRepository(),
+    new InMemoryWorkflowDefinitionRepository(),
+    new InMemoryWorkflowInstanceRepository(),
+    new InMemoryHumanTaskRepository(),
     new InMemoryCustomerIntelligenceRepository(),
     new InMemoryControlPlaneRepository(),
     new InMemoryAuditLog(),
@@ -206,6 +238,9 @@ export async function createPostgresAppContext(connectionString: string): Promis
     new PostgresWorkforceLifecycleRepository(db),
     new PostgresFormDefinitionRepository(db),
     new PostgresFormSubmissionRepository(db),
+    new PostgresWorkflowDefinitionRepository(db),
+    new PostgresWorkflowInstanceRepository(db),
+    new PostgresHumanTaskRepository(db),
     new PostgresCustomerIntelligenceRepository(db),
     new PostgresControlPlaneRepository(db),
     new PostgresAuditLog(db),

@@ -1,0 +1,84 @@
+name: Finalize workflow port branch
+
+on:
+  push:
+    branches:
+      - port/workflow-engine
+    paths:
+      - .github/workflows/finalize-workflow-port.yml
+
+permissions:
+  contents: write
+
+jobs:
+  finalize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: port/workflow-engine
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Apply idempotent integration repairs
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          instance = Path('modules/platform/workflow/src/instance.ts')
+          text = instance.read_text()
+          old = '''  isEligible(userId: string, roles: readonly string[]): boolean {
+    if (this.data.assigneeUserId) return this.data.assigneeUserId === userId;
+    const userMatch = this.data.candidateUserIds.length === 0 || this.data.candidateUserIds.includes(userId);
+    const roleMatch = this.data.candidateRoles.length === 0 || roles.some((role) => this.data.candidateRoles.includes(role));
+    return userMatch && roleMatch;
+  }'''
+          new = '''  isEligible(userId: string, roles: readonly string[]): boolean {
+    if (this.data.assigneeUserId) return this.data.assigneeUserId === userId;
+    if (this.data.candidateUserIds.length === 0 && this.data.candidateRoles.length === 0) return true;
+    return this.data.candidateUserIds.includes(userId)
+      || roles.some((role) => this.data.candidateRoles.includes(role));
+  }'''
+          if old in text:
+              instance.write_text(text.replace(old, new))
+          elif new not in text:
+              raise SystemExit('Unexpected HumanTask.isEligible implementation')
+
+          view = Path('apps/web/src/features/workflow/WorkflowView.tsx')
+          text = view.read_text()
+          old = '''task.assigneeUserId === session.userId ? "Me" : task.assigneeUserId?.slice(0, 8) ?? task.candidateRoles.join(", ") || "Eligible user"'''
+          new = '''task.assigneeUserId === session.userId ? "Me" : ((task.assigneeUserId?.slice(0, 8) ?? task.candidateRoles.join(", ")) || "Eligible user")'''
+          if old in text:
+              view.write_text(text.replace(old, new))
+          elif new not in text:
+              raise SystemExit('Unexpected task assignee rendering expression')
+
+          builder = Path('apps/web/src/features/workflow/WorkflowBuilder.tsx')
+          text = builder.read_text()
+          old = '''value: event.target.value } } : item) })} />'''
+          new = '''value: (item.condition?.operator === "GREATER_THAN" || item.condition?.operator === "LESS_THAN") && event.target.value !== "" ? Number(event.target.value) : event.target.value } } : item) })} />'''
+          if old in text:
+              builder.write_text(text.replace(old, new, 1))
+          elif new not in text:
+              raise SystemExit('Unexpected workflow condition value editor')
+          PY
+      - name: Regenerate workspace lockfile
+        run: npm install --package-lock-only --ignore-scripts
+      - name: Verify finalized source
+        run: |
+          grep -q 'modules/platform/workflow' package-lock.json
+          grep -q 'candidateUserIds.length === 0 &&' modules/platform/workflow/src/instance.ts
+          grep -q 'task.assigneeUserId?.slice' apps/web/src/features/workflow/WorkflowView.tsx
+          grep -q 'item.condition?.operator === "GREATER_THAN"' apps/web/src/features/workflow/WorkflowBuilder.tsx
+      - name: Remove temporary helpers and commit final branch state
+        run: |
+          git rm -f .github/workflows/refresh-workflow-port-lockfile.yml 2>/dev/null || true
+          git rm -f .github/workflows/fix-workflow-port-source.yml 2>/dev/null || true
+          git rm -f .github/workflows/finalize-workflow-port.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package-lock.json modules/platform/workflow/src/instance.ts apps/web/src/features/workflow/WorkflowView.tsx apps/web/src/features/workflow/WorkflowBuilder.tsx
+          git commit -m "Finalize workflow engine port"
+          git push origin HEAD:port/workflow-engine

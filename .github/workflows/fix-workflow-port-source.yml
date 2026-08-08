@@ -1,0 +1,74 @@
+name: Repair workflow port source
+
+on:
+  push:
+    branches:
+      - port/workflow-engine
+    paths:
+      - .github/workflows/fix-workflow-port-source.yml
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: port/workflow-engine
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Apply source corrections
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          instance = Path('modules/platform/workflow/src/instance.ts')
+          text = instance.read_text()
+          old = '''  isEligible(userId: string, roles: readonly string[]): boolean {
+    if (this.data.assigneeUserId) return this.data.assigneeUserId === userId;
+    const userMatch = this.data.candidateUserIds.length === 0 || this.data.candidateUserIds.includes(userId);
+    const roleMatch = this.data.candidateRoles.length === 0 || roles.some((role) => this.data.candidateRoles.includes(role));
+    return userMatch && roleMatch;
+  }'''
+          new = '''  isEligible(userId: string, roles: readonly string[]): boolean {
+    if (this.data.assigneeUserId) return this.data.assigneeUserId === userId;
+    if (this.data.candidateUserIds.length === 0 && this.data.candidateRoles.length === 0) return true;
+    return this.data.candidateUserIds.includes(userId)
+      || roles.some((role) => this.data.candidateRoles.includes(role));
+  }'''
+          if old not in text:
+              raise SystemExit('HumanTask.isEligible source pattern not found')
+          instance.write_text(text.replace(old, new))
+
+          view = Path('apps/web/src/features/workflow/WorkflowView.tsx')
+          text = view.read_text()
+          old = '''task.assigneeUserId === session.userId ? "Me" : task.assigneeUserId?.slice(0, 8) ?? task.candidateRoles.join(", ") || "Eligible user"'''
+          new = '''task.assigneeUserId === session.userId ? "Me" : ((task.assigneeUserId?.slice(0, 8) ?? task.candidateRoles.join(", ")) || "Eligible user")'''
+          if old not in text:
+              raise SystemExit('Workflow task assignee display pattern not found')
+          view.write_text(text.replace(old, new))
+
+          builder = Path('apps/web/src/features/workflow/WorkflowBuilder.tsx')
+          text = builder.read_text()
+          old = '''value: event.target.value } } : item) })} />'''
+          new = '''value: (item.condition?.operator === "GREATER_THAN" || item.condition?.operator === "LESS_THAN") && event.target.value !== "" ? Number(event.target.value) : event.target.value } } : item) })} />'''
+          if old not in text:
+              raise SystemExit('Workflow condition value pattern not found')
+          builder.write_text(text.replace(old, new, 1))
+          PY
+      - name: Refresh workspace lockfile
+        run: npm install --package-lock-only --ignore-scripts
+      - name: Commit repairs
+        run: |
+          if git diff --quiet; then
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add modules/platform/workflow/src/instance.ts apps/web/src/features/workflow/WorkflowView.tsx apps/web/src/features/workflow/WorkflowBuilder.tsx package-lock.json
+          git commit -m "Repair workflow port integration details"
+          git push origin HEAD:port/workflow-engine

@@ -19,6 +19,7 @@ import { registerPublicServiceRoutes, registerServiceRoutes } from "./routes/ser
 import { registerTenantRoutes } from "./routes/tenants.js";
 import { registerUserRoutes } from "./routes/users.js";
 import { registerWorkforceLifecycleRoutes } from "./routes/workforce-lifecycle.js";
+import { registerWorkflowRoutes } from "./routes/workflows.js";
 import { registerPublicWaitlistRoutes, registerWaitlistRoutes } from "./routes/waitlists.js";
 
 export function buildServer(context: AppContext): FastifyInstance {
@@ -103,6 +104,12 @@ export function buildServer(context: AppContext): FastifyInstance {
         protectedScope,
         context.formDefinitionService,
         context.formSubmissionService,
+        context.controlPlaneService,
+        context.workflowEngineService,
+      );
+      registerWorkflowRoutes(
+        protectedScope,
+        context.workflowEngineService,
         context.controlPlaneService,
       );
       registerCustomerIntelligenceRoutes(
