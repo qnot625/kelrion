@@ -11,6 +11,7 @@ import "./features/customer-intelligence/customer-intelligence.css";
 import "./features/forms/forms.css";
 import "./features/workflow/workflow.css";
 import "./features/approvals/approvals.css";
+import "./features/service-desk/service-desk.css";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode><App /></React.StrictMode>,

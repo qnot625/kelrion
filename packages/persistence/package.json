@@ -5,7 +5,7 @@
   "type": "module",
   "exports": "./src/index.ts",
   "scripts": {
-    "test": "node --import tsx --test tests/repositories.test.ts tests/branch-service-repositories.test.ts tests/waitlist-repository.test.ts tests/workforce-core-repositories.test.ts tests/forms-repositories.test.ts tests/workflow-repositories.test.ts tests/approval-repositories.test.ts"
+    "test": "node --import tsx --test tests/repositories.test.ts tests/branch-service-repositories.test.ts tests/waitlist-repository.test.ts tests/workforce-core-repositories.test.ts tests/forms-repositories.test.ts tests/workflow-repositories.test.ts tests/approval-repositories.test.ts tests/service-desk-repositories.test.ts"
   },
   "dependencies": {
     "@adminops/approvals": "*",
@@ -14,6 +14,7 @@
     "@adminops/control-plane": "*",
     "@adminops/forms": "*",
     "@adminops/identity": "*",
+    "@adminops/service-desk": "*",
     "@adminops/tenancy": "*",
     "@adminops/workflow": "*",
     "drizzle-orm": "^0.45.2",

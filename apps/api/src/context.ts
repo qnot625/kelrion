@@ -21,6 +21,16 @@ import {
   type FormSubmissionRepository,
 } from "@adminops/forms";
 import {
+  InMemoryServiceDeskCatalogRepository,
+  InMemoryServiceDeskSlaPolicyRepository,
+  InMemoryServiceDeskTicketRepository,
+  ServiceDeskCatalogService,
+  ServiceDeskService,
+  type ServiceDeskCatalogRepository,
+  type ServiceDeskSlaPolicyRepository,
+  type ServiceDeskTicketRepository,
+} from "@adminops/service-desk";
+import {
   InMemoryHumanTaskRepository,
   InMemoryWorkflowDefinitionRepository,
   InMemoryWorkflowInstanceRepository,
@@ -65,6 +75,9 @@ import {
   PostgresFormDefinitionRepository,
   PostgresFormSubmissionRepository,
   PostgresHumanTaskRepository,
+  PostgresServiceDeskCatalogRepository,
+  PostgresServiceDeskSlaPolicyRepository,
+  PostgresServiceDeskTicketRepository,
   PostgresServiceRepository,
   PostgresWaitlistRepository,
   PostgresWorkflowDefinitionRepository,
@@ -116,6 +129,11 @@ export interface AppContext {
   approvalPolicyRepository: ApprovalPolicyRepository;
   approvalRequestRepository: ApprovalRequestRepository;
   approvalEngineService: ApprovalEngineService;
+  serviceDeskCatalogRepository: ServiceDeskCatalogRepository;
+  serviceDeskTicketRepository: ServiceDeskTicketRepository;
+  serviceDeskSlaPolicyRepository: ServiceDeskSlaPolicyRepository;
+  serviceDeskCatalogService: ServiceDeskCatalogService;
+  serviceDeskService: ServiceDeskService;
   customerCaseService: CustomerCaseService;
   executiveSummaryService: ExecutiveSummaryService;
   auditLog: AuditLog;
@@ -146,6 +164,9 @@ function assemble(
   humanTaskRepository: HumanTaskRepository,
   approvalPolicyRepository: ApprovalPolicyRepository,
   approvalRequestRepository: ApprovalRequestRepository,
+  serviceDeskCatalogRepository: ServiceDeskCatalogRepository,
+  serviceDeskTicketRepository: ServiceDeskTicketRepository,
+  serviceDeskSlaPolicyRepository: ServiceDeskSlaPolicyRepository,
   customerIntelligenceRepository: CustomerIntelligenceRepository,
   controlPlaneRepository: ControlPlaneRepository,
   auditLog: AuditLog,
@@ -160,6 +181,8 @@ function assemble(
   const formSubmissionService = new SubmissionService(formSubmissionRepository, formDefinitionRepository, auditLog);
   const workflowEngineService = new WorkflowEngineService(workflowDefinitionRepository, workflowInstanceRepository, humanTaskRepository, auditLog);
   const approvalEngineService = new ApprovalEngineService(approvalPolicyRepository, approvalRequestRepository, auditLog);
+  const serviceDeskCatalogService = new ServiceDeskCatalogService(serviceDeskCatalogRepository, auditLog);
+  const serviceDeskService = new ServiceDeskService(serviceDeskTicketRepository, serviceDeskSlaPolicyRepository, auditLog);
   return {
     tenantRepository,
     userRepository,
@@ -188,6 +211,11 @@ function assemble(
     approvalPolicyRepository,
     approvalRequestRepository,
     approvalEngineService,
+    serviceDeskCatalogRepository,
+    serviceDeskTicketRepository,
+    serviceDeskSlaPolicyRepository,
+    serviceDeskCatalogService,
+    serviceDeskService,
     customerCaseService: new CustomerCaseService(customerIntelligenceRepository),
     executiveSummaryService: new ExecutiveSummaryService(customerIntelligenceRepository, appointmentService),
     auditLog,
@@ -202,8 +230,9 @@ export function createAppContext(): AppContext {
     new InMemoryEmployeeRepository(), new InMemoryAttendanceRepository(), new InMemoryAttendanceCorrectionRepository(),
     new InMemoryWorkforceLifecycleRepository(), new InMemoryFormDefinitionRepository(), new InMemoryFormSubmissionRepository(),
     new InMemoryWorkflowDefinitionRepository(), new InMemoryWorkflowInstanceRepository(), new InMemoryHumanTaskRepository(),
-    new InMemoryApprovalPolicyRepository(), new InMemoryApprovalRequestRepository(), new InMemoryCustomerIntelligenceRepository(),
-    new InMemoryControlPlaneRepository(), new InMemoryAuditLog(), async () => {},
+    new InMemoryApprovalPolicyRepository(), new InMemoryApprovalRequestRepository(),
+    new InMemoryServiceDeskCatalogRepository(), new InMemoryServiceDeskTicketRepository(), new InMemoryServiceDeskSlaPolicyRepository(),
+    new InMemoryCustomerIntelligenceRepository(), new InMemoryControlPlaneRepository(), new InMemoryAuditLog(), async () => {},
   );
 }
 
@@ -216,8 +245,9 @@ export async function createPostgresAppContext(connectionString: string): Promis
     new PostgresEmployeeRepository(db), new PostgresAttendanceRepository(db), new PostgresAttendanceCorrectionRepository(db),
     new PostgresWorkforceLifecycleRepository(db), new PostgresFormDefinitionRepository(db), new PostgresFormSubmissionRepository(db),
     new PostgresWorkflowDefinitionRepository(db), new PostgresWorkflowInstanceRepository(db), new PostgresHumanTaskRepository(db),
-    new PostgresApprovalPolicyRepository(db), new PostgresApprovalRequestRepository(db), new PostgresCustomerIntelligenceRepository(db),
-    new PostgresControlPlaneRepository(db), new PostgresAuditLog(db), close,
+    new PostgresApprovalPolicyRepository(db), new PostgresApprovalRequestRepository(db),
+    new PostgresServiceDeskCatalogRepository(db), new PostgresServiceDeskTicketRepository(db), new PostgresServiceDeskSlaPolicyRepository(db),
+    new PostgresCustomerIntelligenceRepository(db), new PostgresControlPlaneRepository(db), new PostgresAuditLog(db), close,
   );
 }
 

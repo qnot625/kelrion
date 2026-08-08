@@ -30,7 +30,13 @@ export type Permission =
   | "approvals:view"
   | "approvals:request"
   | "approvals:decide"
-  | "approvals:manage";
+  | "approvals:manage"
+  | "service_desk:view"
+  | "service_desk:create"
+  | "service_desk:comment"
+  | "service_desk:manage"
+  | "service_desk:sla"
+  | "service_desk:catalog";
 
 const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
   owner: [
@@ -42,6 +48,7 @@ const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     "forms:submit", "forms:manage",
     "workflow:view", "workflow:start", "workflow:task", "workflow:manage",
     "approvals:view", "approvals:request", "approvals:decide", "approvals:manage",
+    "service_desk:view", "service_desk:create", "service_desk:comment", "service_desk:manage", "service_desk:sla", "service_desk:catalog",
   ],
   staff: [
     "appointments:book", "appointments:manage", "appointments:view",
@@ -52,6 +59,7 @@ const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     "forms:submit", "forms:manage",
     "workflow:view", "workflow:start", "workflow:task", "workflow:manage",
     "approvals:view", "approvals:request", "approvals:decide", "approvals:manage",
+    "service_desk:view", "service_desk:create", "service_desk:comment", "service_desk:manage", "service_desk:sla", "service_desk:catalog",
   ],
   member: [
     "appointments:book", "leave:request", "lifecycle:view", "cases:create",
@@ -59,6 +67,7 @@ const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     "forms:submit",
     "workflow:view", "workflow:start", "workflow:task",
     "approvals:view", "approvals:request", "approvals:decide",
+    "service_desk:view", "service_desk:create", "service_desk:comment",
   ],
 };
 

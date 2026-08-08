@@ -17,6 +17,8 @@ import { registerEntitlementRoutes } from "./routes/entitlements.js";
 import { registerFormsRoutes } from "./routes/forms.js";
 import { registerPlatformAdminRoutes } from "./routes/platform-admin.js";
 import { registerPublicServiceRoutes, registerServiceRoutes } from "./routes/services.js";
+import { registerServiceDeskCatalogRoutes } from "./routes/service-desk-catalog.js";
+import { registerServiceDeskRoutes } from "./routes/service-desk.js";
 import { registerTenantRoutes } from "./routes/tenants.js";
 import { registerUserRoutes } from "./routes/users.js";
 import { registerWorkforceLifecycleRoutes } from "./routes/workforce-lifecycle.js";
@@ -83,6 +85,17 @@ export function buildServer(context: AppContext): FastifyInstance {
       registerFormsRoutes(protectedScope, context.formDefinitionService, context.formSubmissionService, context.controlPlaneService, context.workflowEngineService);
       registerWorkflowRoutes(protectedScope, context.workflowEngineService, context.controlPlaneService);
       registerApprovalRoutes(protectedScope, context.approvalEngineService, context.workflowEngineService, context.controlPlaneService);
+      registerServiceDeskCatalogRoutes(
+        protectedScope,
+        context.serviceDeskCatalogService,
+        context.serviceDeskService,
+        context.formDefinitionService,
+        context.formSubmissionService,
+        context.workflowEngineService,
+        context.approvalEngineService,
+        context.controlPlaneService,
+      );
+      registerServiceDeskRoutes(protectedScope, context.serviceDeskService, context.controlPlaneService);
       registerCustomerIntelligenceRoutes(protectedScope, context.customerCaseService, context.executiveSummaryService, context.controlPlaneService, context.auditLog);
     });
   });

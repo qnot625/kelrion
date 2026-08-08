@@ -5,6 +5,7 @@ import { BranchesView } from "./features/branches/BranchesView";
 import { CasesView } from "./features/customer-intelligence/CasesView";
 import { ExecutiveView } from "./features/customer-intelligence/ExecutiveView";
 import { FormsView } from "./features/forms/FormsView";
+import { ServiceDeskView } from "./features/service-desk/ServiceDeskView";
 import { AttendanceView } from "./features/workforce/AttendanceView";
 import { EmployeeDirectoryView } from "./features/workforce/EmployeeDirectoryView";
 import { WorkflowView } from "./features/workflow/WorkflowView";
@@ -37,6 +38,7 @@ const demoModules: readonly ModuleKey[] = [
   "forms",
   "workflow",
   "approvals",
+  "service-desk",
   "cases",
   "analytics",
 ];
@@ -125,7 +127,7 @@ export default function App() {
     forms: <FormsView session={session} />,
     workflow: <WorkflowView session={session} />,
     approvals: <ApprovalView session={session} />,
-    serviceDesk: <FoundationView title="Internal service desk" />,
+    serviceDesk: <ServiceDeskView session={session} />,
     cases: <CasesView session={session} />,
     executive: <ExecutiveView session={session} />,
     recruitment: <RecruitmentView />,
