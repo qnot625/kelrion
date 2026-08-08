@@ -138,7 +138,7 @@ function assemble(
     attendanceRepository,
     attendanceCorrectionRepository,
     attendanceService,
-    workforceLifecycleService: new WorkforceLifecycleService(workforceLifecycleRepository),
+    workforceLifecycleService: new WorkforceLifecycleService(workforceLifecycleRepository, employeeRepository),
     customerCaseService: new CustomerCaseService(customerIntelligenceRepository),
     executiveSummaryService: new ExecutiveSummaryService(customerIntelligenceRepository, appointmentService),
     auditLog,

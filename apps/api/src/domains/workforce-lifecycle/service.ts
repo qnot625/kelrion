@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import type { EmployeeRepository } from "@adminops/workforce-core";
 import type { WorkforceLifecycleRepository } from "./repository.js";
 import {
   InsufficientLeaveBalanceError,
@@ -32,6 +33,8 @@ const LEAVE_TRANSITIONS: Record<LeaveStatus, LeaveStatus[]> = {
   rejected: [],
   cancelled: [],
 };
+
+type EmployeeLookup = Pick<EmployeeRepository, "findById" | "findByUserId">;
 
 function startOfDay(value: Date): Date {
   const next = new Date(value);
@@ -84,7 +87,10 @@ function defaultSteps(kind: LifecycleKind): LifecycleStep[] {
 }
 
 export class WorkforceLifecycleService {
-  constructor(private readonly repository: WorkforceLifecycleRepository) {}
+  constructor(
+    private readonly repository: WorkforceLifecycleRepository,
+    private readonly employees?: EmployeeLookup,
+  ) {}
 
   async submitLeave(input: SubmitLeaveInput): Promise<LeaveRequest> {
     const startDate = startOfDay(input.startDate);
@@ -104,7 +110,17 @@ export class WorkforceLifecycleService {
       throw new WorkforceLifecycleValidationError("The leave request must include at least one working day");
     }
 
-    const existing = await this.repository.listLeaveRequests(input.tenantId, input.requesterUserId);
+    const employee = await this.resolveRequesterEmployee(
+      input.tenantId,
+      input.requesterUserId,
+      input.requesterEmployeeId,
+    );
+    const requesterEmployeeId = employee?.id ?? input.requesterEmployeeId ?? null;
+    const existing = await this.repository.listLeaveRequests(
+      input.tenantId,
+      input.requesterUserId,
+      requesterEmployeeId ?? undefined,
+    );
     if (
       existing.some(
         (request) =>
@@ -125,6 +141,7 @@ export class WorkforceLifecycleService {
       id: randomUUID(),
       tenantId: input.tenantId,
       requesterUserId: input.requesterUserId,
+      requesterEmployeeId,
       type: input.type,
       startDate,
       endDate,
@@ -142,11 +159,14 @@ export class WorkforceLifecycleService {
   }
 
   async listLeave(tenantId: string, requesterUserId?: string): Promise<LeaveRequest[]> {
-    return this.repository.listLeaveRequests(tenantId, requesterUserId);
+    if (!requesterUserId) return this.repository.listLeaveRequests(tenantId);
+    const employee = await this.employees?.findByUserId(tenantId, requesterUserId);
+    return this.repository.listLeaveRequests(tenantId, requesterUserId, employee?.id);
   }
 
   async balances(tenantId: string, requesterUserId: string): Promise<LeaveBalance[]> {
-    const requests = await this.repository.listLeaveRequests(tenantId, requesterUserId);
+    const employee = await this.employees?.findByUserId(tenantId, requesterUserId);
+    const requests = await this.repository.listLeaveRequests(tenantId, requesterUserId, employee?.id);
     return (Object.keys(LEAVE_ALLOCATIONS) as LeaveType[]).map((type) =>
       this.calculateBalance(type, requests),
     );
@@ -172,7 +192,10 @@ export class WorkforceLifecycleService {
 
   async cancelLeave(tenantId: string, id: string, requesterUserId: string): Promise<LeaveRequest> {
     const request = await this.requireLeave(tenantId, id);
-    if (request.requesterUserId !== requesterUserId) {
+    const employee = await this.employees?.findByUserId(tenantId, requesterUserId);
+    const ownsByUser = request.requesterUserId === requesterUserId;
+    const ownsByEmployee = Boolean(employee && request.requesterEmployeeId === employee.id);
+    if (!ownsByUser && !ownsByEmployee) {
       throw new LeaveRequestNotFoundError(id);
     }
     return this.transitionLeave(tenantId, id, "cancelled", requesterUserId, "Cancelled by requester");
@@ -180,16 +203,37 @@ export class WorkforceLifecycleService {
 
   async createLifecyclePlan(input: {
     tenantId: string;
-    subjectUserId: string;
+    subjectEmployeeId?: string | null;
+    subjectUserId?: string | null;
     kind: LifecycleKind;
     title?: string;
     dueAt?: Date | null;
     steps?: readonly { title: string; ownerRole?: string }[];
     createdByUserId: string;
   }): Promise<LifecyclePlan> {
-    if (!input.subjectUserId) {
-      throw new WorkforceLifecycleValidationError("subjectUserId is required");
+    let subjectEmployeeId = input.subjectEmployeeId?.trim() || null;
+    let subjectUserId = input.subjectUserId?.trim() || null;
+    if (!subjectEmployeeId && !subjectUserId) {
+      throw new WorkforceLifecycleValidationError("subjectEmployeeId or subjectUserId is required");
     }
+
+    if (this.employees) {
+      if (subjectEmployeeId) {
+        const employee = await this.employees.findById(input.tenantId, subjectEmployeeId);
+        if (!employee) {
+          throw new WorkforceLifecycleValidationError("The selected employee was not found for this tenant");
+        }
+        if (subjectUserId && employee.userId !== subjectUserId) {
+          throw new WorkforceLifecycleValidationError("subjectUserId does not match the selected employee");
+        }
+        subjectEmployeeId = employee.id;
+        subjectUserId = employee.userId;
+      } else if (subjectUserId) {
+        const employee = await this.employees.findByUserId(input.tenantId, subjectUserId);
+        if (employee) subjectEmployeeId = employee.id;
+      }
+    }
+
     const supplied = input.steps?.filter((step) => step.title.trim().length > 0) ?? [];
     if (supplied.length > 50) {
       throw new WorkforceLifecycleValidationError("A lifecycle plan cannot contain more than 50 steps");
@@ -209,7 +253,8 @@ export class WorkforceLifecycleService {
     const plan: LifecyclePlan = {
       id: randomUUID(),
       tenantId: input.tenantId,
-      subjectUserId: input.subjectUserId,
+      subjectEmployeeId,
+      subjectUserId,
       kind: input.kind,
       title:
         input.title?.trim() ||
@@ -227,7 +272,9 @@ export class WorkforceLifecycleService {
   }
 
   async listLifecyclePlans(tenantId: string, subjectUserId?: string): Promise<LifecyclePlan[]> {
-    return this.repository.listLifecyclePlans(tenantId, subjectUserId);
+    if (!subjectUserId) return this.repository.listLifecyclePlans(tenantId);
+    const employee = await this.employees?.findByUserId(tenantId, subjectUserId);
+    return this.repository.listLifecyclePlans(tenantId, subjectUserId, employee?.id);
   }
 
   async completeLifecycleStep(
@@ -332,5 +379,24 @@ export class WorkforceLifecycleService {
     const plan = await this.repository.findLifecyclePlan(tenantId, id);
     if (!plan) throw new LifecyclePlanNotFoundError(id);
     return plan;
+  }
+
+  private async resolveRequesterEmployee(
+    tenantId: string,
+    requesterUserId: string,
+    requesterEmployeeId?: string | null,
+  ) {
+    if (!this.employees) return null;
+    if (requesterEmployeeId) {
+      const employee = await this.employees.findById(tenantId, requesterEmployeeId);
+      if (!employee) {
+        throw new WorkforceLifecycleValidationError("The selected employee was not found for this tenant");
+      }
+      if (employee.userId !== requesterUserId) {
+        throw new WorkforceLifecycleValidationError("The selected employee is not linked to the requester");
+      }
+      return employee;
+    }
+    return this.employees.findByUserId(tenantId, requesterUserId);
   }
 }

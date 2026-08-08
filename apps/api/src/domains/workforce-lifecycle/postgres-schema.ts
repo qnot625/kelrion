@@ -17,9 +17,8 @@ export const leaveRequests = pgTable(
     tenantId: uuid("tenant_id")
       .notNull()
       .references(() => schema.tenants.id, { onDelete: "cascade" }),
-    requesterUserId: uuid("requester_user_id")
-      .notNull()
-      .references(() => schema.users.id, { onDelete: "cascade" }),
+    requesterUserId: uuid("requester_user_id").references(() => schema.users.id, { onDelete: "set null" }),
+    requesterEmployeeId: uuid("requester_employee_id"),
     type: text("type").notNull(),
     startDate: timestamp("start_date", { withTimezone: true }).notNull(),
     endDate: timestamp("end_date", { withTimezone: true }).notNull(),
@@ -34,6 +33,7 @@ export const leaveRequests = pgTable(
   },
   (table) => [
     index("leave_requests_tenant_requester_idx").on(table.tenantId, table.requesterUserId),
+    index("leave_requests_tenant_employee_idx").on(table.tenantId, table.requesterEmployeeId),
     index("leave_requests_tenant_status_idx").on(table.tenantId, table.status),
   ],
 );
@@ -45,9 +45,8 @@ export const lifecyclePlans = pgTable(
     tenantId: uuid("tenant_id")
       .notNull()
       .references(() => schema.tenants.id, { onDelete: "cascade" }),
-    subjectUserId: uuid("subject_user_id")
-      .notNull()
-      .references(() => schema.users.id, { onDelete: "cascade" }),
+    subjectUserId: uuid("subject_user_id").references(() => schema.users.id, { onDelete: "set null" }),
+    subjectEmployeeId: uuid("subject_employee_id"),
     kind: text("kind").notNull(),
     title: text("title").notNull(),
     dueAt: timestamp("due_at", { withTimezone: true }),
@@ -60,6 +59,7 @@ export const lifecyclePlans = pgTable(
   },
   (table) => [
     index("lifecycle_plans_tenant_subject_idx").on(table.tenantId, table.subjectUserId),
+    index("lifecycle_plans_tenant_employee_idx").on(table.tenantId, table.subjectEmployeeId),
     index("lifecycle_plans_tenant_status_idx").on(table.tenantId, table.status),
   ],
 );

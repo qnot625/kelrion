@@ -38,6 +38,10 @@ function optionalNote(value: unknown): string | null {
   return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 
+function optionalSubject(value: unknown): string | null {
+  return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
 async function respondToDomainError(reply: { code(status: number): { send(body: unknown): unknown } }, error: unknown) {
   const handled = domainError(error);
   if (!handled) throw error;
@@ -74,6 +78,7 @@ export function registerWorkforceLifecycleRoutes(
         targetType: "leave_request",
         targetId: leave.id,
         metadata: {
+          requesterEmployeeId: leave.requesterEmployeeId,
           type: leave.type,
           startDate: leave.startDate.toISOString(),
           endDate: leave.endDate.toISOString(),
@@ -112,7 +117,11 @@ export function registerWorkforceLifecycleRoutes(
         action: "leave.approved",
         targetType: "leave_request",
         targetId: leave.id,
-        metadata: { requesterUserId: leave.requesterUserId, workingDays: leave.workingDays },
+        metadata: {
+          requesterUserId: leave.requesterUserId,
+          requesterEmployeeId: leave.requesterEmployeeId,
+          workingDays: leave.workingDays,
+        },
       });
       return reply.send(leave);
     } catch (error) { return respondToDomainError(reply, error); }
@@ -132,7 +141,10 @@ export function registerWorkforceLifecycleRoutes(
         action: "leave.rejected",
         targetType: "leave_request",
         targetId: leave.id,
-        metadata: { requesterUserId: leave.requesterUserId },
+        metadata: {
+          requesterUserId: leave.requesterUserId,
+          requesterEmployeeId: leave.requesterEmployeeId,
+        },
       });
       return reply.send(leave);
     } catch (error) { return respondToDomainError(reply, error); }
@@ -147,17 +159,27 @@ export function registerWorkforceLifecycleRoutes(
         action: "leave.cancelled",
         targetType: "leave_request",
         targetId: leave.id,
+        metadata: { requesterEmployeeId: leave.requesterEmployeeId },
       });
       return reply.send(leave);
     } catch (error) { return respondToDomainError(reply, error); }
   });
 
   app.post("/lifecycle-plans", { preHandler: [requireModule(controlPlane, "lifecycle"), requirePermission("lifecycle:manage")] }, async (request, reply) => {
-    const body = request.body as { subjectUserId?: unknown; kind?: unknown; title?: unknown; dueAt?: unknown; steps?: unknown };
+    const body = request.body as {
+      subjectEmployeeId?: unknown;
+      subjectUserId?: unknown;
+      kind?: unknown;
+      title?: unknown;
+      dueAt?: unknown;
+      steps?: unknown;
+    };
+    const subjectEmployeeId = optionalSubject(body?.subjectEmployeeId);
+    const subjectUserId = optionalSubject(body?.subjectUserId);
     if (
-      typeof body?.subjectUserId !== "string" || typeof body.kind !== "string" ||
-      !LIFECYCLE_KINDS.has(body.kind as LifecycleKind)
-    ) return reply.code(400).send({ error: "subjectUserId and a valid kind are required" });
+      typeof body?.kind !== "string" || !LIFECYCLE_KINDS.has(body.kind as LifecycleKind) ||
+      (!subjectEmployeeId && !subjectUserId)
+    ) return reply.code(400).send({ error: "subjectEmployeeId or subjectUserId and a valid kind are required" });
 
     const steps = Array.isArray(body.steps)
       ? body.steps.map((step) => {
@@ -172,7 +194,8 @@ export function registerWorkforceLifecycleRoutes(
     try {
       const plan = await service.createLifecyclePlan({
         tenantId: request.tenant!.tenantId,
-        subjectUserId: body.subjectUserId,
+        subjectEmployeeId,
+        subjectUserId,
         kind: body.kind as LifecycleKind,
         title: typeof body.title === "string" ? body.title : undefined,
         dueAt: typeof body.dueAt === "string" ? new Date(body.dueAt) : null,
@@ -185,7 +208,11 @@ export function registerWorkforceLifecycleRoutes(
         action: `${plan.kind}.plan_created`,
         targetType: "lifecycle_plan",
         targetId: plan.id,
-        metadata: { subjectUserId: plan.subjectUserId, steps: plan.steps.length },
+        metadata: {
+          subjectEmployeeId: plan.subjectEmployeeId,
+          subjectUserId: plan.subjectUserId,
+          steps: plan.steps.length,
+        },
       });
       return reply.code(201).send(plan);
     } catch (error) { return respondToDomainError(reply, error); }
@@ -216,7 +243,11 @@ export function registerWorkforceLifecycleRoutes(
           action: `${plan.kind}.step_completed`,
           targetType: "lifecycle_plan",
           targetId: plan.id,
-          metadata: { stepId: request.params.stepId, status: plan.status },
+          metadata: {
+            subjectEmployeeId: plan.subjectEmployeeId,
+            stepId: request.params.stepId,
+            status: plan.status,
+          },
         });
         return reply.send(plan);
       } catch (error) { return respondToDomainError(reply, error); }
@@ -236,6 +267,7 @@ export function registerWorkforceLifecycleRoutes(
         action: `${plan.kind}.plan_cancelled`,
         targetType: "lifecycle_plan",
         targetId: plan.id,
+        metadata: { subjectEmployeeId: plan.subjectEmployeeId },
       });
       return reply.send(plan);
     } catch (error) { return respondToDomainError(reply, error); }

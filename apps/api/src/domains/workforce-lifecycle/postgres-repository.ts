@@ -1,4 +1,4 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, or } from "drizzle-orm";
 import type { Database } from "@adminops/persistence";
 import type { WorkforceLifecycleRepository } from "./repository.js";
 import { leaveRequests, lifecyclePlans } from "./postgres-schema.js";
@@ -19,6 +19,7 @@ function toLeaveRequest(row: LeaveRow): LeaveRequest {
     id: row.id,
     tenantId: row.tenantId,
     requesterUserId: row.requesterUserId,
+    requesterEmployeeId: row.requesterEmployeeId,
     type: row.type as LeaveType,
     startDate: row.startDate,
     endDate: row.endDate,
@@ -37,6 +38,7 @@ function toLifecyclePlan(row: PlanRow): LifecyclePlan {
   return {
     id: row.id,
     tenantId: row.tenantId,
+    subjectEmployeeId: row.subjectEmployeeId,
     subjectUserId: row.subjectUserId,
     kind: row.kind as LifecycleKind,
     title: row.title,
@@ -63,6 +65,7 @@ export class PostgresWorkforceLifecycleRepository implements WorkforceLifecycleR
         id: request.id,
         tenantId: request.tenantId,
         requesterUserId: request.requesterUserId,
+        requesterEmployeeId: request.requesterEmployeeId,
         type: request.type,
         startDate: request.startDate,
         endDate: request.endDate,
@@ -78,6 +81,7 @@ export class PostgresWorkforceLifecycleRepository implements WorkforceLifecycleR
       .onConflictDoUpdate({
         target: leaveRequests.id,
         set: {
+          requesterEmployeeId: request.requesterEmployeeId,
           status: request.status,
           decidedByUserId: request.decidedByUserId,
           decisionNote: request.decisionNote,
@@ -96,9 +100,23 @@ export class PostgresWorkforceLifecycleRepository implements WorkforceLifecycleR
     return row ? toLeaveRequest(row) : undefined;
   }
 
-  async listLeaveRequests(tenantId: string, requesterUserId?: string): Promise<LeaveRequest[]> {
-    const condition = requesterUserId
-      ? and(eq(leaveRequests.tenantId, tenantId), eq(leaveRequests.requesterUserId, requesterUserId))
+  async listLeaveRequests(
+    tenantId: string,
+    requesterUserId?: string,
+    requesterEmployeeId?: string,
+  ): Promise<LeaveRequest[]> {
+    const person = requesterUserId && requesterEmployeeId
+      ? or(
+          eq(leaveRequests.requesterUserId, requesterUserId),
+          eq(leaveRequests.requesterEmployeeId, requesterEmployeeId),
+        )
+      : requesterEmployeeId
+        ? eq(leaveRequests.requesterEmployeeId, requesterEmployeeId)
+        : requesterUserId
+          ? eq(leaveRequests.requesterUserId, requesterUserId)
+          : undefined;
+    const condition = person
+      ? and(eq(leaveRequests.tenantId, tenantId), person)
       : eq(leaveRequests.tenantId, tenantId);
     const rows = await this.db
       .select()
@@ -114,6 +132,7 @@ export class PostgresWorkforceLifecycleRepository implements WorkforceLifecycleR
       .values({
         id: plan.id,
         tenantId: plan.tenantId,
+        subjectEmployeeId: plan.subjectEmployeeId,
         subjectUserId: plan.subjectUserId,
         kind: plan.kind,
         title: plan.title,
@@ -131,6 +150,8 @@ export class PostgresWorkforceLifecycleRepository implements WorkforceLifecycleR
       .onConflictDoUpdate({
         target: lifecyclePlans.id,
         set: {
+          subjectEmployeeId: plan.subjectEmployeeId,
+          subjectUserId: plan.subjectUserId,
           title: plan.title,
           dueAt: plan.dueAt,
           status: plan.status,
@@ -153,9 +174,23 @@ export class PostgresWorkforceLifecycleRepository implements WorkforceLifecycleR
     return row ? toLifecyclePlan(row) : undefined;
   }
 
-  async listLifecyclePlans(tenantId: string, subjectUserId?: string): Promise<LifecyclePlan[]> {
-    const condition = subjectUserId
-      ? and(eq(lifecyclePlans.tenantId, tenantId), eq(lifecyclePlans.subjectUserId, subjectUserId))
+  async listLifecyclePlans(
+    tenantId: string,
+    subjectUserId?: string,
+    subjectEmployeeId?: string,
+  ): Promise<LifecyclePlan[]> {
+    const person = subjectUserId && subjectEmployeeId
+      ? or(
+          eq(lifecyclePlans.subjectUserId, subjectUserId),
+          eq(lifecyclePlans.subjectEmployeeId, subjectEmployeeId),
+        )
+      : subjectEmployeeId
+        ? eq(lifecyclePlans.subjectEmployeeId, subjectEmployeeId)
+        : subjectUserId
+          ? eq(lifecyclePlans.subjectUserId, subjectUserId)
+          : undefined;
+    const condition = person
+      ? and(eq(lifecyclePlans.tenantId, tenantId), person)
       : eq(lifecyclePlans.tenantId, tenantId);
     const rows = await this.db
       .select()

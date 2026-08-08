@@ -4,7 +4,8 @@ export type LeaveStatus = "pending" | "approved" | "rejected" | "cancelled";
 export interface LeaveRequest {
   readonly id: string;
   readonly tenantId: string;
-  readonly requesterUserId: string;
+  readonly requesterUserId: string | null;
+  readonly requesterEmployeeId: string | null;
   readonly type: LeaveType;
   readonly startDate: Date;
   readonly endDate: Date;
@@ -21,6 +22,7 @@ export interface LeaveRequest {
 export interface SubmitLeaveInput {
   readonly tenantId: string;
   readonly requesterUserId: string;
+  readonly requesterEmployeeId?: string | null;
   readonly type: LeaveType;
   readonly startDate: Date;
   readonly endDate: Date;
@@ -51,7 +53,8 @@ export interface LifecycleStep {
 export interface LifecyclePlan {
   readonly id: string;
   readonly tenantId: string;
-  readonly subjectUserId: string;
+  readonly subjectEmployeeId: string | null;
+  readonly subjectUserId: string | null;
   readonly kind: LifecycleKind;
   readonly title: string;
   readonly dueAt: Date | null;

@@ -1,17 +1,20 @@
 import { CalendarCheck2, Check, Clock3, Loader2, Plus, X } from "lucide-react";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import {
-  klerionApi,
+  lifecycleApi,
   type ApiLeaveBalance,
   type ApiLeaveRequest,
   type ApiLeaveType,
-} from "../lib/api";
+} from "../features/workforce-lifecycle/lifecycleApi";
+import { workforceApi, type ApiEmployee } from "../features/workforce/workforceApi";
 import type { KlerionSession } from "../lib/session";
 
 const demoRequests: ApiLeaveRequest[] = [
   {
     id: "demo-leave-1",
+    tenantId: "demo-tenant",
     requesterUserId: "demo-owner",
+    requesterEmployeeId: "demo-employee-1",
     type: "annual",
     startDate: "2026-08-10T00:00:00.000Z",
     endDate: "2026-08-14T00:00:00.000Z",
@@ -29,6 +32,28 @@ const demoBalances: ApiLeaveBalance[] = [
   { type: "parental", allocatedDays: 90, approvedDays: 0, pendingDays: 0, remainingDays: 90 },
 ];
 
+const demoEmployees: ApiEmployee[] = [
+  {
+    id: "demo-employee-1",
+    tenantId: "demo-tenant",
+    userId: "demo-owner",
+    employeeNumber: "EMP-001",
+    firstName: "Amina",
+    lastName: "Yusuf",
+    email: "owner@klerion.demo",
+    hireDate: "2025-03-10",
+    employmentType: "full_time",
+    employmentStatus: "active",
+    departmentId: null,
+    positionId: null,
+    managerId: null,
+    branchId: null,
+    terminationDate: null,
+    createdAt: "2025-03-10T08:00:00.000Z",
+    updatedAt: "2026-08-06T08:00:00.000Z",
+  },
+];
+
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("en", { day: "numeric", month: "short", year: "numeric" }).format(
     new Date(value),
@@ -39,6 +64,7 @@ export function LeaveView({ session }: { readonly session: KlerionSession }) {
   const canApprove = session.roles.some((role) => role === "owner" || role === "staff");
   const [requests, setRequests] = useState<ApiLeaveRequest[]>([]);
   const [balances, setBalances] = useState<ApiLeaveBalance[]>([]);
+  const [employees, setEmployees] = useState<ApiEmployee[]>([]);
   const [scope, setScope] = useState<"mine" | "all">(canApprove ? "all" : "mine");
   const [loading, setLoading] = useState(true);
   const [working, setWorking] = useState<string | null>(null);
@@ -52,13 +78,18 @@ export function LeaveView({ session }: { readonly session: KlerionSession }) {
       if (session.mode === "demo") {
         setRequests(demoRequests);
         setBalances(demoBalances);
+        setEmployees(demoEmployees);
       } else {
-        const [nextRequests, nextBalances] = await Promise.all([
-          klerionApi.listLeaveRequests(session, nextScope),
-          klerionApi.listLeaveBalances(session),
+        const [nextRequests, nextBalances, nextEmployees] = await Promise.all([
+          lifecycleApi.listLeaveRequests(session, nextScope),
+          lifecycleApi.listLeaveBalances(session),
+          canApprove
+            ? workforceApi.listEmployees(session, { limit: 200 })
+            : Promise.resolve({ data: [] as readonly ApiEmployee[], total: 0, limit: 200, offset: 0 }),
         ]);
         setRequests(nextRequests);
         setBalances(nextBalances);
+        setEmployees([...nextEmployees.data]);
       }
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Could not load leave records");
@@ -70,6 +101,7 @@ export function LeaveView({ session }: { readonly session: KlerionSession }) {
   useEffect(() => { void load(scope); }, [scope]);
 
   const pending = useMemo(() => requests.filter((request) => request.status === "pending").length, [requests]);
+  const employeeById = useMemo(() => new Map(employees.map((employee) => [employee.id, employee])), [employees]);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -85,12 +117,12 @@ export function LeaveView({ session }: { readonly session: KlerionSession }) {
       };
       const created =
         session.mode === "demo"
-          ? { ...demoRequests[0], id: `demo-${Date.now()}`, ...input, createdAt: new Date().toISOString() }
-          : await klerionApi.submitLeaveRequest(session, input);
+          ? { ...demoRequests[0]!, id: `demo-${Date.now()}`, ...input, createdAt: new Date().toISOString() }
+          : await lifecycleApi.submitLeaveRequest(session, input);
       setRequests((current) => [created, ...current]);
       setShowForm(false);
       event.currentTarget.reset();
-      if (session.mode !== "demo") setBalances(await klerionApi.listLeaveBalances(session));
+      if (session.mode !== "demo") setBalances(await lifecycleApi.listLeaveBalances(session));
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Could not submit leave request");
     } finally {
@@ -105,7 +137,7 @@ export function LeaveView({ session }: { readonly session: KlerionSession }) {
       const updated =
         session.mode === "demo"
           ? { ...request, status: decision === "approve" ? "approved" as const : "rejected" as const }
-          : await klerionApi.decideLeaveRequest(session, request.id, decision);
+          : await lifecycleApi.decideLeaveRequest(session, request.id, decision);
       setRequests((current) => current.map((item) => (item.id === updated.id ? updated : item)));
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Could not update leave request");
@@ -169,22 +201,30 @@ export function LeaveView({ session }: { readonly session: KlerionSession }) {
           <table>
             <thead><tr><th>Request</th><th>Dates</th><th>Duration</th><th>Status</th><th>Actions</th></tr></thead>
             <tbody>
-              {requests.map((request) => (
-                <tr key={request.id}>
-                  <td><div className="stack"><strong>{request.type[0].toUpperCase() + request.type.slice(1)} leave</strong><small>{request.reason}</small></div></td>
-                  <td>{formatDate(request.startDate)} – {formatDate(request.endDate)}</td>
-                  <td>{request.workingDays} working day{request.workingDays === 1 ? "" : "s"}</td>
-                  <td><span className={`status-pill ${request.status}`}>{request.status.replace("_", " ")}</span></td>
-                  <td>
-                    <div className="row-actions">
-                      {canApprove && request.status === "pending" && <>
-                        <button onClick={() => void decide(request, "approve")} disabled={working === request.id}><Check size={13} />Approve</button>
-                        <button onClick={() => void decide(request, "reject")} disabled={working === request.id}><X size={13} />Reject</button>
-                      </>}
-                    </div>
-                  </td>
-                </tr>
-              ))}
+              {requests.map((request) => {
+                const employee = request.requesterEmployeeId ? employeeById.get(request.requesterEmployeeId) : undefined;
+                return (
+                  <tr key={request.id}>
+                    <td>
+                      <div className="stack">
+                        <strong>{employee ? `${employee.firstName} ${employee.lastName}` : `${request.type[0].toUpperCase() + request.type.slice(1)} leave`}</strong>
+                        <small>{employee ? `${employee.employeeNumber} · ${request.type} leave · ${request.reason}` : request.reason}</small>
+                      </div>
+                    </td>
+                    <td>{formatDate(request.startDate)} – {formatDate(request.endDate)}</td>
+                    <td>{request.workingDays} working day{request.workingDays === 1 ? "" : "s"}</td>
+                    <td><span className={`status-pill ${request.status}`}>{request.status.replace("_", " ")}</span></td>
+                    <td>
+                      <div className="row-actions">
+                        {canApprove && request.status === "pending" && <>
+                          <button onClick={() => void decide(request, "approve")} disabled={working === request.id}><Check size={13} />Approve</button>
+                          <button onClick={() => void decide(request, "reject")} disabled={working === request.id}><X size={13} />Reject</button>
+                        </>}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
               {requests.length === 0 && <tr><td colSpan={5}><div className="empty-state">No leave requests yet.</div></td></tr>}
             </tbody>
           </table>

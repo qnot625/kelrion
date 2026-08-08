@@ -14,10 +14,20 @@ export class InMemoryWorkforceLifecycleRepository implements WorkforceLifecycleR
     return request?.tenantId === tenantId ? request : undefined;
   }
 
-  async listLeaveRequests(tenantId: string, requesterUserId?: string): Promise<LeaveRequest[]> {
+  async listLeaveRequests(
+    tenantId: string,
+    requesterUserId?: string,
+    requesterEmployeeId?: string,
+  ): Promise<LeaveRequest[]> {
     return [...this.leaveRequests.values()]
       .filter((request) => request.tenantId === tenantId)
-      .filter((request) => !requesterUserId || request.requesterUserId === requesterUserId)
+      .filter((request) => {
+        if (!requesterUserId && !requesterEmployeeId) return true;
+        return (
+          (requesterEmployeeId !== undefined && request.requesterEmployeeId === requesterEmployeeId) ||
+          (requesterUserId !== undefined && request.requesterUserId === requesterUserId)
+        );
+      })
       .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
   }
 
@@ -30,10 +40,20 @@ export class InMemoryWorkforceLifecycleRepository implements WorkforceLifecycleR
     return plan?.tenantId === tenantId ? plan : undefined;
   }
 
-  async listLifecyclePlans(tenantId: string, subjectUserId?: string): Promise<LifecyclePlan[]> {
+  async listLifecyclePlans(
+    tenantId: string,
+    subjectUserId?: string,
+    subjectEmployeeId?: string,
+  ): Promise<LifecyclePlan[]> {
     return [...this.lifecyclePlans.values()]
       .filter((plan) => plan.tenantId === tenantId)
-      .filter((plan) => !subjectUserId || plan.subjectUserId === subjectUserId)
+      .filter((plan) => {
+        if (!subjectUserId && !subjectEmployeeId) return true;
+        return (
+          (subjectEmployeeId !== undefined && plan.subjectEmployeeId === subjectEmployeeId) ||
+          (subjectUserId !== undefined && plan.subjectUserId === subjectUserId)
+        );
+      })
       .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
   }
 }
