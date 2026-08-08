@@ -13,6 +13,7 @@ import { registerControlPlanePublicRoutes } from "./routes/control-plane-public.
 import { registerCustomerIntelligenceRoutes } from "./routes/customer-intelligence.js";
 import { registerEmployeeRoutes } from "./routes/employees.js";
 import { registerEntitlementRoutes } from "./routes/entitlements.js";
+import { registerFormsRoutes } from "./routes/forms.js";
 import { registerPlatformAdminRoutes } from "./routes/platform-admin.js";
 import { registerPublicServiceRoutes, registerServiceRoutes } from "./routes/services.js";
 import { registerTenantRoutes } from "./routes/tenants.js";
@@ -97,6 +98,12 @@ export function buildServer(context: AppContext): FastifyInstance {
         context.workforceLifecycleService,
         context.controlPlaneService,
         context.auditLog,
+      );
+      registerFormsRoutes(
+        protectedScope,
+        context.formDefinitionService,
+        context.formSubmissionService,
+        context.controlPlaneService,
       );
       registerCustomerIntelligenceRoutes(
         protectedScope,

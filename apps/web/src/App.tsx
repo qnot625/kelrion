@@ -3,6 +3,7 @@ import { availableRoutes, Shell, type RouteKey } from "./components/Shell";
 import { BranchesView } from "./features/branches/BranchesView";
 import { CasesView } from "./features/customer-intelligence/CasesView";
 import { ExecutiveView } from "./features/customer-intelligence/ExecutiveView";
+import { FormsView } from "./features/forms/FormsView";
 import { AttendanceView } from "./features/workforce/AttendanceView";
 import { EmployeeDirectoryView } from "./features/workforce/EmployeeDirectoryView";
 import { klerionApi, type AuthenticationRequest } from "./lib/api";
@@ -116,7 +117,7 @@ export default function App() {
     attendance: <AttendanceView session={session} />,
     leave: <LeaveView session={session} />,
     lifecycle: <LifecycleView session={session} />,
-    forms: <FoundationView title="Dynamic forms" />,
+    forms: <FormsView session={session} />,
     workflow: <FoundationView title="Workflow automation" />,
     approvals: <FoundationView title="Approval management" />,
     serviceDesk: <FoundationView title="Internal service desk" />,

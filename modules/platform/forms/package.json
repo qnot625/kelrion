@@ -1,0 +1,13 @@
+{
+  "name": "@adminops/forms",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": "./src/index.ts",
+  "scripts": {
+    "test": "node --import tsx --test tests/forms.test.ts"
+  },
+  "dependencies": {
+    "@adminops/audit": "*"
+  }
+}

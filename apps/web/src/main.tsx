@@ -8,6 +8,7 @@ import "./styles/workforce-lifecycle.css";
 import "./styles/control-plane.css";
 import "./styles/scheduling.css";
 import "./features/customer-intelligence/customer-intelligence.css";
+import "./features/forms/forms.css";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode><App /></React.StrictMode>,

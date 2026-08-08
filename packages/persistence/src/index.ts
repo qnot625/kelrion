@@ -11,3 +11,4 @@ export * from "./postgres-service-repository.js";
 export * from "./postgres-waitlist-repository.js";
 export * from "./postgres-employee-repository.js";
 export * from "./postgres-attendance-repository.js";
+export * from "./postgres-form-repository.js";

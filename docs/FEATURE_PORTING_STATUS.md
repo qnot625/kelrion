@@ -8,7 +8,7 @@ This document records the controlled integration sequence for preserved feature 
 2. Branch and service foundation — completed; advanced scheduling and waitlists — completed
 3. Employee records and attendance — completed
 4. Workforce lifecycle reconciliation — completed
-5. Forms platform — pending
+5. Forms platform — completed
 6. Workflow and approvals — pending
 7. Internal service desk — pending
 8. Queue domain and persistence — pending

@@ -5,6 +5,14 @@ import {
   PlatformAdminAuthService,
   type ControlPlaneRepository,
 } from "@adminops/control-plane";
+import {
+  FormDefinitionService,
+  InMemoryFormDefinitionRepository,
+  InMemoryFormSubmissionRepository,
+  SubmissionService,
+  type FormDefinitionRepository,
+  type FormSubmissionRepository,
+} from "@adminops/forms";
 import { AuthService, InMemoryUserRepository, type UserRepository } from "@adminops/identity";
 import { InMemoryTenantRepository, type TenantRepository } from "@adminops/tenancy";
 import {
@@ -36,6 +44,8 @@ import {
   PostgresAuditLog,
   PostgresBranchRepository,
   PostgresEmployeeRepository,
+  PostgresFormDefinitionRepository,
+  PostgresFormSubmissionRepository,
   PostgresServiceRepository,
   PostgresWaitlistRepository,
   PostgresControlPlaneRepository,
@@ -74,6 +84,10 @@ export interface AppContext {
   attendanceCorrectionRepository: AttendanceCorrectionRepository;
   attendanceService: AttendanceService;
   workforceLifecycleService: WorkforceLifecycleService;
+  formDefinitionRepository: FormDefinitionRepository;
+  formSubmissionRepository: FormSubmissionRepository;
+  formDefinitionService: FormDefinitionService;
+  formSubmissionService: SubmissionService;
   customerCaseService: CustomerCaseService;
   executiveSummaryService: ExecutiveSummaryService;
   auditLog: AuditLog;
@@ -99,6 +113,8 @@ function assemble(
   attendanceRepository: AttendanceRepository,
   attendanceCorrectionRepository: AttendanceCorrectionRepository,
   workforceLifecycleRepository: WorkforceLifecycleRepository,
+  formDefinitionRepository: FormDefinitionRepository,
+  formSubmissionRepository: FormSubmissionRepository,
   customerIntelligenceRepository: CustomerIntelligenceRepository,
   controlPlaneRepository: ControlPlaneRepository,
   auditLog: AuditLog,
@@ -119,6 +135,8 @@ function assemble(
     attendanceCorrectionRepository,
     auditLog,
   );
+  const formDefinitionService = new FormDefinitionService(formDefinitionRepository, auditLog);
+  const formSubmissionService = new SubmissionService(formSubmissionRepository, formDefinitionRepository, auditLog);
   return {
     tenantRepository,
     userRepository,
@@ -139,6 +157,10 @@ function assemble(
     attendanceCorrectionRepository,
     attendanceService,
     workforceLifecycleService: new WorkforceLifecycleService(workforceLifecycleRepository, employeeRepository),
+    formDefinitionRepository,
+    formSubmissionRepository,
+    formDefinitionService,
+    formSubmissionService,
     customerCaseService: new CustomerCaseService(customerIntelligenceRepository),
     executiveSummaryService: new ExecutiveSummaryService(customerIntelligenceRepository, appointmentService),
     auditLog,
@@ -159,6 +181,8 @@ export function createAppContext(): AppContext {
     new InMemoryAttendanceRepository(),
     new InMemoryAttendanceCorrectionRepository(),
     new InMemoryWorkforceLifecycleRepository(),
+    new InMemoryFormDefinitionRepository(),
+    new InMemoryFormSubmissionRepository(),
     new InMemoryCustomerIntelligenceRepository(),
     new InMemoryControlPlaneRepository(),
     new InMemoryAuditLog(),
@@ -180,6 +204,8 @@ export async function createPostgresAppContext(connectionString: string): Promis
     new PostgresAttendanceRepository(db),
     new PostgresAttendanceCorrectionRepository(db),
     new PostgresWorkforceLifecycleRepository(db),
+    new PostgresFormDefinitionRepository(db),
+    new PostgresFormSubmissionRepository(db),
     new PostgresCustomerIntelligenceRepository(db),
     new PostgresControlPlaneRepository(db),
     new PostgresAuditLog(db),

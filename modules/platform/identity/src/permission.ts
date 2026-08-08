@@ -20,60 +20,31 @@ export type Permission =
   | "attendance:clock"
   | "attendance:read"
   | "attendance:sync"
-  | "attendance:manage";
+  | "attendance:manage"
+  | "forms:submit"
+  | "forms:manage";
 
 const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
   owner: [
-    "appointments:book",
-    "appointments:manage",
-    "appointments:view",
-    "tenant:manage",
-    "leave:request",
-    "leave:approve",
-    "lifecycle:view",
-    "lifecycle:manage",
-    "cases:create",
-    "cases:manage",
-    "analytics:view",
-    "employees:create",
-    "employees:read",
-    "employees:update",
-    "employees:delete",
-    "employees:manage_hierarchy",
-    "attendance:clock",
-    "attendance:read",
-    "attendance:sync",
-    "attendance:manage",
+    "appointments:book", "appointments:manage", "appointments:view", "tenant:manage",
+    "leave:request", "leave:approve", "lifecycle:view", "lifecycle:manage",
+    "cases:create", "cases:manage", "analytics:view",
+    "employees:create", "employees:read", "employees:update", "employees:delete", "employees:manage_hierarchy",
+    "attendance:clock", "attendance:read", "attendance:sync", "attendance:manage",
+    "forms:submit", "forms:manage",
   ],
   staff: [
-    "appointments:book",
-    "appointments:manage",
-    "appointments:view",
-    "leave:request",
-    "leave:approve",
-    "lifecycle:view",
-    "lifecycle:manage",
-    "cases:create",
-    "cases:manage",
-    "analytics:view",
-    "employees:create",
-    "employees:read",
-    "employees:update",
-    "employees:manage_hierarchy",
-    "attendance:clock",
-    "attendance:read",
-    "attendance:sync",
-    "attendance:manage",
+    "appointments:book", "appointments:manage", "appointments:view",
+    "leave:request", "leave:approve", "lifecycle:view", "lifecycle:manage",
+    "cases:create", "cases:manage", "analytics:view",
+    "employees:create", "employees:read", "employees:update", "employees:manage_hierarchy",
+    "attendance:clock", "attendance:read", "attendance:sync", "attendance:manage",
+    "forms:submit", "forms:manage",
   ],
   member: [
-    "appointments:book",
-    "leave:request",
-    "lifecycle:view",
-    "cases:create",
-    "employees:read",
-    "attendance:clock",
-    "attendance:read",
-    "attendance:sync",
+    "appointments:book", "leave:request", "lifecycle:view", "cases:create",
+    "employees:read", "attendance:clock", "attendance:read", "attendance:sync",
+    "forms:submit",
   ],
 };
 
