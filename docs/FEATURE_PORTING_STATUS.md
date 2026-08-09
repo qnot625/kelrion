@@ -13,7 +13,7 @@ This document records the controlled integration sequence for preserved feature 
 7. Internal service desk — completed
 8. Queue domain and persistence — completed
 9. Notifications and real-time events — completed
-10. Persona-specific queue interfaces — pending
+10. Persona-specific queue interfaces — completed
 11. Final entitlement-aware UI consolidation — pending
 
 Each step is implemented on an isolated branch, validated by backend and Company Console CI, and merged before the next dependency layer begins.

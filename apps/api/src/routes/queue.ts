@@ -118,7 +118,7 @@ export function registerQueueRoutes(
     const rawCustomer = isRecord(body.customer) ? body.customer : {};
     const canManage = hasPermission(request.auth!.roles, "queue:manage");
     const customer = {
-      userId: canManage && typeof rawCustomer.userId === "string" ? rawCustomer.userId : request.auth!.userId,
+      userId: canManage ? (typeof rawCustomer.userId === "string" ? rawCustomer.userId : null) : request.auth!.userId,
       employeeId: typeof rawCustomer.employeeId === "string" ? rawCustomer.employeeId : null,
       customerId: typeof rawCustomer.customerId === "string" ? rawCustomer.customerId : null,
       name: typeof rawCustomer.name === "string" ? rawCustomer.name : null,

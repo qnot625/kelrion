@@ -19,6 +19,7 @@ import { registerFormsRoutes } from "./routes/forms.js";
 import { registerNotificationRoutes } from "./routes/notifications.js";
 import { registerPlatformAdminRoutes } from "./routes/platform-admin.js";
 import { registerQueueRealtimeRoutes } from "./routes/queue-realtime.js";
+import { registerPublicQueueRoutes } from "./routes/queue-public.js";
 import { registerQueueRoutes } from "./routes/queue.js";
 import { registerPublicServiceRoutes, registerServiceRoutes } from "./routes/services.js";
 import { registerServiceDeskCatalogRoutes } from "./routes/service-desk-catalog.js";
@@ -56,6 +57,12 @@ export function buildServer(context: AppContext): FastifyInstance {
       registerModuleEntitlementGuard(appointmentPublicScope, context.controlPlaneService, "appointments");
       registerPublicAppointmentRoutes(appointmentPublicScope, context.appointmentService, context.auditLog);
       registerPublicWaitlistRoutes(appointmentPublicScope, context.appointmentService, context.auditLog);
+    });
+
+
+    tenantScope.register(async (queuePublicScope) => {
+      registerModuleEntitlementGuard(queuePublicScope, context.controlPlaneService, "queue");
+      registerPublicQueueRoutes(queuePublicScope, context.queueService);
     });
 
     tenantScope.register(async (protectedScope) => {
