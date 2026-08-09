@@ -36,25 +36,29 @@ const modulePresentation: Record<ModuleKey, { name: string; description: string;
 };
 
 export function DashboardView({ session, onOpen }: { readonly session: KlerionSession; readonly onOpen: (route: RouteKey) => void }) {
+  const isOwner = session.roles.includes("owner");
+  const roleLabel = isOwner ? "Owner" : session.roles.includes("staff") ? "Staff" : "Member";
+  const visibleModules = session.enabledModules.filter((key) => session.mode === "demo" || !modulePresentation[key].preview);
+
   return (
     <section className="view modular-dashboard">
       <header className="view-heading">
         <div>
           <span className="eyebrow">Entitlement-aware workspace</span>
           <h1>{session.tenantName} operational control centre</h1>
-          <p>Your dashboard contains only the modules enabled for this organisation. Add or remove modules from Subscription & Billing.</p>
+          <p>Your dashboard contains only the production modules enabled for this organisation.</p>
         </div>
-        <button className="secondary" onClick={() => onOpen("billing")}>Manage subscription</button>
+        {isOwner && <button className="secondary" onClick={() => onOpen("billing")}>Manage subscription</button>}
       </header>
 
       <div className="entitlement-summary">
-        <article><span>Enabled modules</span><strong>{session.enabledModules.length}</strong><small>Dependencies included automatically</small></article>
-        <article><span>Workspace access</span><strong>{session.roles.includes("owner") ? "Owner" : "Member"}</strong><small>Role and module checks are enforced server-side</small></article>
+        <article><span>Enabled modules</span><strong>{visibleModules.length}</strong><small>Dependencies included automatically</small></article>
+        <article><span>Workspace access</span><strong>{roleLabel}</strong><small>Role and module checks are enforced server-side</small></article>
         <article><span>Organisation</span><strong>{session.tenantSlug}</strong><small>Tenant-isolated data boundary</small></article>
       </div>
 
       <div className="module-workspace-grid">
-        {session.enabledModules.map((key) => {
+        {visibleModules.map((key) => {
           const module = modulePresentation[key];
           const Icon = module.icon;
           return (
@@ -68,12 +72,12 @@ export function DashboardView({ session, onOpen }: { readonly session: KlerionSe
         })}
       </div>
 
-      {session.enabledModules.length === 0 && (
+      {visibleModules.length === 0 && (
         <div className="empty-module-state">
           <Blocks size={34} />
           <h2>No operational modules are enabled</h2>
-          <p>An organisation owner or Klerion God admin must activate at least one package before operational dashboards become available.</p>
-          <button className="primary" onClick={() => onOpen("billing")}>Choose modules</button>
+          <p>An organisation owner or Klerion God admin must activate at least one production package before operational dashboards become available.</p>
+          {isOwner && <button className="primary" onClick={() => onOpen("billing")}>Review subscription</button>}
         </div>
       )}
     </section>

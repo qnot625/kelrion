@@ -35,7 +35,7 @@ const packages: Array<{
     key: "workforce",
     name: "Klerion Workforce",
     description: "Employee records, attendance, leave and lifecycle operations.",
-    modules: ["employees", "attendance", "leave", "lifecycle", "recruitment"],
+    modules: ["employees", "attendance", "leave", "lifecycle"],
     icon: UsersRound,
   },
   {

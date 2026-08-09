@@ -4,6 +4,7 @@ import type { TenantRepository, TenantStatus } from "@adminops/tenancy";
 import type { BillingInvoice, InvoiceLineItem } from "./invoice.js";
 import {
   MODULE_CATALOGUE,
+  assertLiveModuleSelection,
   expandModuleSelection,
   getModuleDefinition,
   type ModuleKey,
@@ -142,6 +143,7 @@ export class ControlPlaneService {
   ): Promise<OrganisationSubscription> {
     const existing = await this.repository.findSubscriptionByTenant(tenantId);
     if (!existing) throw new Error("Subscription not found");
+    if (input.enabledModules) assertLiveModuleSelection(input.enabledModules);
     const enabledModules = expandModuleSelection(input.enabledModules ?? existing.enabledModules);
     const billingCycle = input.billingCycle ?? existing.billingCycle;
     const currency = input.currency ?? existing.currency;
@@ -208,6 +210,7 @@ export class ControlPlaneService {
     if (!Number.isInteger(input.trialDays) || input.trialDays < 0 || input.trialDays > 90) {
       throw new Error("trialDays must be an integer between 0 and 90");
     }
+    assertLiveModuleSelection(input.enabledModules);
     const enabledModules = expandModuleSelection(input.enabledModules);
     const now = new Date();
     const trialEndsAt = input.trialDays > 0 ? new Date(now.getTime() + input.trialDays * 86_400_000) : null;

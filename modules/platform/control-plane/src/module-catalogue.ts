@@ -28,12 +28,7 @@ export interface ModuleDefinition {
   readonly availability: "live" | "preview";
 }
 
-const price = (ngn: number, usd: number, gbp: number, eur: number): ModuleDefinition["prices"] => ({
-  NGN: ngn,
-  USD: usd,
-  GBP: gbp,
-  EUR: eur,
-});
+const price = (ngn: number, usd: number, gbp: number, eur: number): ModuleDefinition["prices"] => ({ NGN: ngn, USD: usd, GBP: gbp, EUR: eur });
 
 export const MODULE_CATALOGUE: readonly ModuleDefinition[] = [
   { key: "branches", name: "Branches & Services", description: "Locations, departments, service catalogue and capacity discovery.", category: "customer-operations", dependencies: [], prices: price(600000, 3900, 3200, 3600), availability: "live" },
@@ -61,8 +56,11 @@ export function getModuleDefinition(key: ModuleKey): ModuleDefinition {
   return definition;
 }
 
-export function isModuleKey(value: string): value is ModuleKey {
-  return BY_KEY.has(value as ModuleKey);
+export function isModuleKey(value: string): value is ModuleKey { return BY_KEY.has(value as ModuleKey); }
+
+export function assertLiveModuleSelection(selection: readonly ModuleKey[]): void {
+  const preview = selection.filter((key) => getModuleDefinition(key).availability !== "live");
+  if (preview.length) throw new Error(`Preview modules cannot be enabled on live subscriptions: ${preview.join(", ")}`);
 }
 
 export function expandModuleSelection(selection: readonly ModuleKey[]): ModuleKey[] {
