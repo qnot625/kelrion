@@ -11,7 +11,7 @@ This document records the controlled integration sequence for preserved feature 
 5. Forms platform — completed
 6. Workflow and approvals — completed
 7. Internal service desk — completed
-8. Queue domain and persistence — pending
+8. Queue domain and persistence — completed
 9. Notifications and real-time events — pending
 10. Persona-specific queue interfaces — pending
 11. Final entitlement-aware UI consolidation — pending

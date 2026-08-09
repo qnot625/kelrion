@@ -31,6 +31,10 @@ export type Permission =
   | "approvals:request"
   | "approvals:decide"
   | "approvals:manage"
+  | "queue:view"
+  | "queue:checkin"
+  | "queue:serve"
+  | "queue:manage"
   | "service_desk:view"
   | "service_desk:create"
   | "service_desk:comment"
@@ -48,6 +52,8 @@ const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     "forms:submit", "forms:manage",
     "workflow:view", "workflow:start", "workflow:task", "workflow:manage",
     "approvals:view", "approvals:request", "approvals:decide", "approvals:manage",
+    "queue:view", "queue:checkin", "queue:serve", "queue:manage",
+    "queue:view", "queue:checkin", "queue:serve", "queue:manage",
     "service_desk:view", "service_desk:create", "service_desk:comment", "service_desk:manage", "service_desk:sla", "service_desk:catalog",
   ],
   staff: [
@@ -67,6 +73,7 @@ const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     "forms:submit",
     "workflow:view", "workflow:start", "workflow:task",
     "approvals:view", "approvals:request", "approvals:decide",
+    "queue:view", "queue:checkin",
     "service_desk:view", "service_desk:create", "service_desk:comment",
   ],
 };

@@ -1,17 +1,44 @@
 {
   "files": [],
   "references": [
-    { "path": "modules/platform/tenancy" },
-    { "path": "modules/platform/identity" },
-    { "path": "modules/platform/audit" },
-    { "path": "modules/platform/control-plane" },
-    { "path": "modules/platform/forms" },
-    { "path": "modules/platform/workflow" },
-    { "path": "modules/platform/approvals" },
-    { "path": "modules/platform/service-desk" },
-    { "path": "modules/domains/branch-flow" },
-    { "path": "modules/domains/workforce-core" },
-    { "path": "packages/persistence" },
-    { "path": "apps/api" }
+    {
+      "path": "modules/platform/tenancy"
+    },
+    {
+      "path": "modules/platform/identity"
+    },
+    {
+      "path": "modules/platform/audit"
+    },
+    {
+      "path": "modules/platform/control-plane"
+    },
+    {
+      "path": "modules/platform/forms"
+    },
+    {
+      "path": "modules/platform/workflow"
+    },
+    {
+      "path": "modules/platform/approvals"
+    },
+    {
+      "path": "modules/platform/service-desk"
+    },
+    {
+      "path": "modules/domains/branch-flow"
+    },
+    {
+      "path": "modules/domains/workforce-core"
+    },
+    {
+      "path": "packages/persistence"
+    },
+    {
+      "path": "apps/api"
+    },
+    {
+      "path": "modules/platform/queue"
+    }
   ]
 }

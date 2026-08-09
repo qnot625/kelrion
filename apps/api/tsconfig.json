@@ -4,18 +4,45 @@
     "rootDir": "src",
     "outDir": "dist"
   },
-  "include": ["src"],
+  "include": [
+    "src"
+  ],
   "references": [
-    { "path": "../../modules/platform/control-plane" },
-    { "path": "../../modules/platform/tenancy" },
-    { "path": "../../modules/platform/identity" },
-    { "path": "../../modules/platform/audit" },
-    { "path": "../../modules/platform/forms" },
-    { "path": "../../modules/platform/workflow" },
-    { "path": "../../modules/platform/approvals" },
-    { "path": "../../modules/platform/service-desk" },
-    { "path": "../../modules/domains/branch-flow" },
-    { "path": "../../modules/domains/workforce-core" },
-    { "path": "../../packages/persistence" }
+    {
+      "path": "../../modules/platform/control-plane"
+    },
+    {
+      "path": "../../modules/platform/tenancy"
+    },
+    {
+      "path": "../../modules/platform/identity"
+    },
+    {
+      "path": "../../modules/platform/audit"
+    },
+    {
+      "path": "../../modules/platform/forms"
+    },
+    {
+      "path": "../../modules/platform/workflow"
+    },
+    {
+      "path": "../../modules/platform/approvals"
+    },
+    {
+      "path": "../../modules/platform/service-desk"
+    },
+    {
+      "path": "../../modules/domains/branch-flow"
+    },
+    {
+      "path": "../../modules/domains/workforce-core"
+    },
+    {
+      "path": "../../packages/persistence"
+    },
+    {
+      "path": "../../modules/platform/queue"
+    }
   ]
 }

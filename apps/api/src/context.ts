@@ -39,6 +39,16 @@ import {
   type WorkflowDefinitionRepository,
   type WorkflowInstanceRepository,
 } from "@adminops/workflow";
+import {
+  InMemoryQueueConfigurationRepository,
+  InMemoryQueueEntryRepository,
+  InMemoryQueueEventRepository,
+  QueueCheckInService,
+  QueueService,
+  type QueueConfigurationRepository,
+  type QueueEntryRepository,
+  type QueueEventRepository,
+} from "@adminops/queue";
 import { AuthService, InMemoryUserRepository, type UserRepository } from "@adminops/identity";
 import { InMemoryTenantRepository, type TenantRepository } from "@adminops/tenancy";
 import {
@@ -75,6 +85,9 @@ import {
   PostgresFormDefinitionRepository,
   PostgresFormSubmissionRepository,
   PostgresHumanTaskRepository,
+  PostgresQueueConfigurationRepository,
+  PostgresQueueEntryRepository,
+  PostgresQueueEventRepository,
   PostgresServiceDeskCatalogRepository,
   PostgresServiceDeskSlaPolicyRepository,
   PostgresServiceDeskTicketRepository,
@@ -129,6 +142,11 @@ export interface AppContext {
   approvalPolicyRepository: ApprovalPolicyRepository;
   approvalRequestRepository: ApprovalRequestRepository;
   approvalEngineService: ApprovalEngineService;
+  queueConfigurationRepository: QueueConfigurationRepository;
+  queueEntryRepository: QueueEntryRepository;
+  queueEventRepository: QueueEventRepository;
+  queueService: QueueService;
+  queueCheckInService: QueueCheckInService;
   serviceDeskCatalogRepository: ServiceDeskCatalogRepository;
   serviceDeskTicketRepository: ServiceDeskTicketRepository;
   serviceDeskSlaPolicyRepository: ServiceDeskSlaPolicyRepository;
@@ -164,6 +182,9 @@ function assemble(
   humanTaskRepository: HumanTaskRepository,
   approvalPolicyRepository: ApprovalPolicyRepository,
   approvalRequestRepository: ApprovalRequestRepository,
+  queueConfigurationRepository: QueueConfigurationRepository,
+  queueEntryRepository: QueueEntryRepository,
+  queueEventRepository: QueueEventRepository,
   serviceDeskCatalogRepository: ServiceDeskCatalogRepository,
   serviceDeskTicketRepository: ServiceDeskTicketRepository,
   serviceDeskSlaPolicyRepository: ServiceDeskSlaPolicyRepository,
@@ -181,6 +202,32 @@ function assemble(
   const formSubmissionService = new SubmissionService(formSubmissionRepository, formDefinitionRepository, auditLog);
   const workflowEngineService = new WorkflowEngineService(workflowDefinitionRepository, workflowInstanceRepository, humanTaskRepository, auditLog);
   const approvalEngineService = new ApprovalEngineService(approvalPolicyRepository, approvalRequestRepository, auditLog);
+  const queueService = new QueueService(queueConfigurationRepository, queueEntryRepository, queueEventRepository, auditLog);
+  const queueCheckInService = new QueueCheckInService(queueService, async (tenantId, appointmentId) => {
+    const values = (await appointmentService.list(tenantId)).map((item) => item as unknown as Record<string, unknown>);
+    const appointment = values.find((item) => item.id === appointmentId);
+    if (!appointment) return null;
+    const branchId = typeof appointment.branchId === "string" ? appointment.branchId : null;
+    const serviceId = typeof appointment.serviceId === "string" ? appointment.serviceId : null;
+    if (!branchId || !serviceId) return null;
+    const startValue = appointment.startsAt ?? appointment.startAt ?? appointment.startTime;
+    const startsAt = startValue instanceof Date ? startValue : typeof startValue === "string" ? new Date(startValue) : null;
+    return {
+      appointmentId,
+      branchId,
+      serviceId,
+      departmentId: typeof appointment.departmentId === "string" ? appointment.departmentId : null,
+      startsAt: startsAt && !Number.isNaN(startsAt.getTime()) ? startsAt : null,
+      status: typeof appointment.status === "string" ? appointment.status : null,
+      customer: {
+        userId: typeof appointment.customerUserId === "string" ? appointment.customerUserId : null,
+        customerId: typeof appointment.customerId === "string" ? appointment.customerId : null,
+        name: typeof appointment.customerName === "string" ? appointment.customerName : null,
+        email: typeof appointment.customerEmail === "string" ? appointment.customerEmail : null,
+        phone: typeof appointment.customerPhone === "string" ? appointment.customerPhone : null,
+      },
+    };
+  });
   const serviceDeskCatalogService = new ServiceDeskCatalogService(serviceDeskCatalogRepository, auditLog);
   const serviceDeskService = new ServiceDeskService(serviceDeskTicketRepository, serviceDeskSlaPolicyRepository, auditLog);
   return {
@@ -211,6 +258,11 @@ function assemble(
     approvalPolicyRepository,
     approvalRequestRepository,
     approvalEngineService,
+    queueConfigurationRepository,
+    queueEntryRepository,
+    queueEventRepository,
+    queueService,
+    queueCheckInService,
     serviceDeskCatalogRepository,
     serviceDeskTicketRepository,
     serviceDeskSlaPolicyRepository,
@@ -231,6 +283,7 @@ export function createAppContext(): AppContext {
     new InMemoryWorkforceLifecycleRepository(), new InMemoryFormDefinitionRepository(), new InMemoryFormSubmissionRepository(),
     new InMemoryWorkflowDefinitionRepository(), new InMemoryWorkflowInstanceRepository(), new InMemoryHumanTaskRepository(),
     new InMemoryApprovalPolicyRepository(), new InMemoryApprovalRequestRepository(),
+    new InMemoryQueueConfigurationRepository(), new InMemoryQueueEntryRepository(), new InMemoryQueueEventRepository(),
     new InMemoryServiceDeskCatalogRepository(), new InMemoryServiceDeskTicketRepository(), new InMemoryServiceDeskSlaPolicyRepository(),
     new InMemoryCustomerIntelligenceRepository(), new InMemoryControlPlaneRepository(), new InMemoryAuditLog(), async () => {},
   );
@@ -246,6 +299,7 @@ export async function createPostgresAppContext(connectionString: string): Promis
     new PostgresWorkforceLifecycleRepository(db), new PostgresFormDefinitionRepository(db), new PostgresFormSubmissionRepository(db),
     new PostgresWorkflowDefinitionRepository(db), new PostgresWorkflowInstanceRepository(db), new PostgresHumanTaskRepository(db),
     new PostgresApprovalPolicyRepository(db), new PostgresApprovalRequestRepository(db),
+    new PostgresQueueConfigurationRepository(db), new PostgresQueueEntryRepository(db), new PostgresQueueEventRepository(db),
     new PostgresServiceDeskCatalogRepository(db), new PostgresServiceDeskTicketRepository(db), new PostgresServiceDeskSlaPolicyRepository(db),
     new PostgresCustomerIntelligenceRepository(db), new PostgresControlPlaneRepository(db), new PostgresAuditLog(db), close,
   );

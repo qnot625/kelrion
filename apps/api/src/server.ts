@@ -16,6 +16,7 @@ import { registerEmployeeRoutes } from "./routes/employees.js";
 import { registerEntitlementRoutes } from "./routes/entitlements.js";
 import { registerFormsRoutes } from "./routes/forms.js";
 import { registerPlatformAdminRoutes } from "./routes/platform-admin.js";
+import { registerQueueRoutes } from "./routes/queue.js";
 import { registerPublicServiceRoutes, registerServiceRoutes } from "./routes/services.js";
 import { registerServiceDeskCatalogRoutes } from "./routes/service-desk-catalog.js";
 import { registerServiceDeskRoutes } from "./routes/service-desk.js";
@@ -85,6 +86,7 @@ export function buildServer(context: AppContext): FastifyInstance {
       registerFormsRoutes(protectedScope, context.formDefinitionService, context.formSubmissionService, context.controlPlaneService, context.workflowEngineService);
       registerWorkflowRoutes(protectedScope, context.workflowEngineService, context.controlPlaneService);
       registerApprovalRoutes(protectedScope, context.approvalEngineService, context.workflowEngineService, context.controlPlaneService);
+      registerQueueRoutes(protectedScope, context.queueService, context.queueCheckInService, context.controlPlaneService);
       registerServiceDeskCatalogRoutes(
         protectedScope,
         context.serviceDeskCatalogService,
