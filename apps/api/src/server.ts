@@ -1,5 +1,8 @@
 import Fastify, { type FastifyInstance } from "fastify";
+import { BillingLifecycleService } from "@adminops/control-plane";
 import type { AppContext } from "./context.js";
+import { createStripeBillingProviderFromEnv, type BillingPaymentProvider } from "./billing/stripe-provider.js";
+import { registerBillingLifecycleWorker } from "./billing/worker.js";
 import { registerNotificationDeliveryWorker } from "./notifications/worker.js";
 import { registerAuthGuard } from "./plugins/auth-guard.js";
 import { registerModuleEntitlementGuard } from "./plugins/module-entitlement-guard.js";
@@ -10,6 +13,7 @@ import { registerAppointmentRoutes, registerPublicAppointmentRoutes } from "./ro
 import { registerAttendanceRoutes } from "./routes/attendance.js";
 import { registerAuditRoutes } from "./routes/audit.js";
 import { registerAuthRoutes } from "./routes/auth.js";
+import { registerBillingPaymentRoutes, registerStripeBillingWebhookRoutes } from "./routes/billing-payments.js";
 import { registerBranchRoutes, registerPublicBranchRoutes } from "./routes/branches.js";
 import { registerControlPlanePublicRoutes } from "./routes/control-plane-public.js";
 import { registerCustomerIntelligenceRoutes } from "./routes/customer-intelligence.js";
@@ -30,9 +34,24 @@ import { registerWorkforceLifecycleRoutes } from "./routes/workforce-lifecycle.j
 import { registerWorkflowRoutes } from "./routes/workflows.js";
 import { registerPublicWaitlistRoutes, registerWaitlistRoutes } from "./routes/waitlists.js";
 
-export function buildServer(context: AppContext): FastifyInstance {
+export interface BuildServerOptions {
+  readonly billingPaymentProvider?: BillingPaymentProvider | null;
+}
+
+export function buildServer(context: AppContext, options: BuildServerOptions = {}): FastifyInstance {
   const app = Fastify({ logger: false });
+  const billingLifecycle = new BillingLifecycleService(context.controlPlaneRepository);
+  const stripeBillingProvider = options.billingPaymentProvider === undefined
+    ? createStripeBillingProviderFromEnv()
+    : options.billingPaymentProvider;
   app.get("/health", async () => ({ status: "ok" }));
+
+  registerBillingLifecycleWorker(app, billingLifecycle);
+  app.register(async (stripeWebhookScope) => {
+    stripeWebhookScope.removeContentTypeParser("application/json");
+    stripeWebhookScope.addContentTypeParser("application/json", { parseAs: "buffer" }, (_request, body, done) => done(null, body));
+    registerStripeBillingWebhookRoutes(stripeWebhookScope, billingLifecycle, stripeBillingProvider, context.auditLog);
+  });
 
   registerNotificationDeliveryWorker(app, context);
   registerControlPlanePublicRoutes(app, context.controlPlaneService, context.authService, context.platformAdminAuthService, context.auditLog);
@@ -40,7 +59,7 @@ export function buildServer(context: AppContext): FastifyInstance {
 
   app.register(async (platformScope) => {
     registerPlatformAdminGuard(platformScope, context.platformAdminAuthService);
-    registerPlatformAdminRoutes(platformScope, context.controlPlaneService);
+    registerPlatformAdminRoutes(platformScope, context.controlPlaneService, billingLifecycle);
   });
 
   app.register(async (tenantScope) => {
@@ -59,7 +78,6 @@ export function buildServer(context: AppContext): FastifyInstance {
       registerPublicWaitlistRoutes(appointmentPublicScope, context.appointmentService, context.auditLog);
     });
 
-
     tenantScope.register(async (queuePublicScope) => {
       registerModuleEntitlementGuard(queuePublicScope, context.controlPlaneService, "queue");
       registerPublicQueueRoutes(queuePublicScope, context.queueService);
@@ -68,6 +86,7 @@ export function buildServer(context: AppContext): FastifyInstance {
     tenantScope.register(async (protectedScope) => {
       registerAuthGuard(protectedScope, context.authService);
       registerEntitlementRoutes(protectedScope, context.controlPlaneService, context.tenantRepository);
+      registerBillingPaymentRoutes(protectedScope, billingLifecycle, context.userRepository, stripeBillingProvider);
       registerAuditRoutes(protectedScope, context.auditLog);
       registerUserRoutes(protectedScope, context.userRepository, context.auditLog);
 

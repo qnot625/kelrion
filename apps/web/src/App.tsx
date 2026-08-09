@@ -68,6 +68,10 @@ export default function App() {
   }, [session?.token]);
 
   useEffect(() => {
+    if (session && (hash === "#billing" || hash.startsWith("#billing?"))) setRoute("billing");
+  }, [hash, session]);
+
+  useEffect(() => {
     if (session && !availableRoutes(session).includes(route)) setRoute("dashboard");
   }, [session, route]);
 

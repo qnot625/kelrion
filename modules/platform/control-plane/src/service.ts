@@ -20,6 +20,7 @@ import {
 } from "./subscription.js";
 
 const LEGACY_DEFAULT_MODULES: readonly ModuleKey[] = ["appointments", "leave", "lifecycle", "cases", "analytics"];
+const PAYMENT_GRACE_MS = 7 * 24 * 60 * 60 * 1000;
 
 export class ModuleNotEnabledError extends Error {
   constructor(moduleKey: ModuleKey) {
@@ -229,7 +230,8 @@ export class ControlPlaneService {
       updatedAt: now,
     };
     await this.repository.saveSubscription(subscription);
-    await this.repository.createInvoice(this.buildInvoice(subscription, trialEndsAt ?? now));
+    const invoiceDueAt = trialEndsAt ?? new Date(now.getTime() + PAYMENT_GRACE_MS);
+    await this.repository.createInvoice(this.buildInvoice(subscription, invoiceDueAt));
     return subscription;
   }
 
