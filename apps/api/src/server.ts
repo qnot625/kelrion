@@ -1,5 +1,6 @@
 import Fastify, { type FastifyInstance } from "fastify";
 import type { AppContext } from "./context.js";
+import { registerNotificationDeliveryWorker } from "./notifications/worker.js";
 import { registerAuthGuard } from "./plugins/auth-guard.js";
 import { registerModuleEntitlementGuard } from "./plugins/module-entitlement-guard.js";
 import { registerPlatformAdminGuard } from "./plugins/platform-admin-guard.js";
@@ -15,7 +16,9 @@ import { registerCustomerIntelligenceRoutes } from "./routes/customer-intelligen
 import { registerEmployeeRoutes } from "./routes/employees.js";
 import { registerEntitlementRoutes } from "./routes/entitlements.js";
 import { registerFormsRoutes } from "./routes/forms.js";
+import { registerNotificationRoutes } from "./routes/notifications.js";
 import { registerPlatformAdminRoutes } from "./routes/platform-admin.js";
+import { registerQueueRealtimeRoutes } from "./routes/queue-realtime.js";
 import { registerQueueRoutes } from "./routes/queue.js";
 import { registerPublicServiceRoutes, registerServiceRoutes } from "./routes/services.js";
 import { registerServiceDeskCatalogRoutes } from "./routes/service-desk-catalog.js";
@@ -30,6 +33,7 @@ export function buildServer(context: AppContext): FastifyInstance {
   const app = Fastify({ logger: false });
   app.get("/health", async () => ({ status: "ok" }));
 
+  registerNotificationDeliveryWorker(app, context);
   registerControlPlanePublicRoutes(app, context.controlPlaneService, context.authService, context.platformAdminAuthService, context.auditLog);
   registerTenantRoutes(app, context.controlPlaneService, context.auditLog);
 
@@ -87,6 +91,8 @@ export function buildServer(context: AppContext): FastifyInstance {
       registerWorkflowRoutes(protectedScope, context.workflowEngineService, context.controlPlaneService);
       registerApprovalRoutes(protectedScope, context.approvalEngineService, context.workflowEngineService, context.controlPlaneService);
       registerQueueRoutes(protectedScope, context.queueService, context.queueCheckInService, context.controlPlaneService);
+      registerQueueRealtimeRoutes(protectedScope, context.queueService, context.controlPlaneService);
+      registerNotificationRoutes(protectedScope, context.notificationService, context.userRepository, context.controlPlaneService, context.notificationProviders);
       registerServiceDeskCatalogRoutes(
         protectedScope,
         context.serviceDeskCatalogService,

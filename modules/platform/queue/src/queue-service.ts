@@ -6,8 +6,16 @@ import { QueueCapacityError, QueueConfigurationNotFoundError, QueueEntryNotFound
 import type { QueueConfigurationRepository, QueueEntryRepository, QueueEventRepository } from "./repositories.js";
 import type { AppointmentCheckInFacts, QueueCheckInSource, QueueConfigurationData, QueueCustomerReference, QueueEventType, QueuePriority } from "./types.js";
 
+export type QueueEventObserver = (input: {
+  entry: QueueEntry;
+  type: QueueEventType;
+  actorUserId: string | null;
+  data: Readonly<Record<string, unknown>>;
+  sequence: number;
+}) => Promise<void>;
+
 export class QueueService {
-  constructor(private readonly configurations: QueueConfigurationRepository, private readonly entries: QueueEntryRepository, private readonly events: QueueEventRepository, private readonly auditLog?: AuditLog) {}
+  constructor(private readonly configurations: QueueConfigurationRepository, private readonly entries: QueueEntryRepository, private readonly events: QueueEventRepository, private readonly auditLog?: AuditLog, private readonly observer?: QueueEventObserver) {}
   async createConfiguration(input: { tenantId:string; actorUserId:string; id?:string; branchId:string; serviceId:string; departmentId?:string|null; prefix:string; averageServiceMinutes?:number; allowWalkIns?:boolean; allowAppointmentCheckIn?:boolean; maxEarlyCheckInMinutes?:number|null; maxLateCheckInMinutes?:number|null; maxConcurrentServing?:number }) {
     const id=input.id?.trim()||randomUUID(); if(await this.configurations.findById(input.tenantId,id)) throw new QueueValidationError(`Queue configuration '${id}' already exists`);
     if(await this.configurations.findForQueue(input.tenantId,input.branchId,input.serviceId,input.departmentId??null)) throw new QueueValidationError("A queue configuration already exists for this branch/service/department");
@@ -48,7 +56,7 @@ export class QueueService {
   private async requireQueueConfiguration(tenantId:string,branchId:string,serviceId:string,departmentId?:string|null){const config=await this.configurations.findForQueue(tenantId,branchId,serviceId,departmentId??null);if(!config)throw new QueueConfigurationNotFoundError(branchId,serviceId);return config;}
   private async requireConfiguration(tenantId:string,id:string){const config=await this.configurations.findById(tenantId,id);if(!config)throw new QueueConfigurationNotFoundError(id,id);return config;}
   private async requireEntry(tenantId:string,id:string){const item=await this.entries.findById(tenantId,id);if(!item)throw new QueueEntryNotFoundError(id);return item;}
-  private async event(item:QueueEntry,type:QueueEventType,actorUserId:string|null,data:Record<string,unknown>){return this.events.append({id:randomUUID(),tenantId:item.tenantId,branchId:item.branchId,serviceId:item.serviceId,entryId:item.id,type,actorUserId,data,createdAt:new Date()});}
+  private async event(item:QueueEntry,type:QueueEventType,actorUserId:string|null,data:Record<string,unknown>){const saved=await this.events.append({id:randomUUID(),tenantId:item.tenantId,branchId:item.branchId,serviceId:item.serviceId,entryId:item.id,type,actorUserId,data,createdAt:new Date()});await this.observer?.({entry:item.clone(),type,actorUserId,data:structuredClone(data),sequence:saved.sequence});return saved;}
   private businessDate(value:Date){return value.toISOString().slice(0,10);}
   private validation(error:unknown){return new QueueValidationError(error instanceof Error?error.message:"Invalid queue operation");}
   private state(error:unknown){return new QueueStateError(error instanceof Error?error.message:"Invalid queue state transition");}

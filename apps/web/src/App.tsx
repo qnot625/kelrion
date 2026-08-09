@@ -5,6 +5,7 @@ import { BranchesView } from "./features/branches/BranchesView";
 import { CasesView } from "./features/customer-intelligence/CasesView";
 import { ExecutiveView } from "./features/customer-intelligence/ExecutiveView";
 import { FormsView } from "./features/forms/FormsView";
+import { NotificationView } from "./features/notifications/NotificationView";
 import { ServiceDeskView } from "./features/service-desk/ServiceDeskView";
 import { AttendanceView } from "./features/workforce/AttendanceView";
 import { EmployeeDirectoryView } from "./features/workforce/EmployeeDirectoryView";
@@ -16,7 +17,6 @@ import { AuditView } from "./views/AuditView";
 import { AuthView } from "./views/AuthView";
 import { BillingView } from "./views/BillingView";
 import { DashboardView } from "./views/DashboardView";
-import { FoundationView } from "./views/FoundationView";
 import { LeaveView } from "./views/LeaveView";
 import { LifecycleView } from "./views/LifecycleView";
 import { OnboardingView } from "./views/OnboardingView";
@@ -119,7 +119,7 @@ export default function App() {
     branches: <BranchesView session={session} />,
     appointments: <AppointmentsView session={session} />,
     queue: <QueueView />,
-    notifications: <FoundationView title="Omnichannel notifications" />,
+    notifications: <NotificationView session={session} />,
     employees: <EmployeeDirectoryView session={session} />,
     attendance: <AttendanceView session={session} />,
     leave: <LeaveView session={session} />,

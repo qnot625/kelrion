@@ -21,6 +21,18 @@ import {
   type FormSubmissionRepository,
 } from "@adminops/forms";
 import {
+  InMemoryNotificationDeliveryRepository,
+  InMemoryNotificationPreferenceRepository,
+  InMemoryNotificationRepository,
+  InMemoryNotificationTemplateRepository,
+  NotificationService,
+  type NotificationDeliveryRepository,
+  type NotificationPreferenceRepository,
+  type NotificationProviderMap,
+  type NotificationRepository,
+  type NotificationTemplateRepository,
+} from "@adminops/notifications";
+import {
   InMemoryServiceDeskCatalogRepository,
   InMemoryServiceDeskSlaPolicyRepository,
   InMemoryServiceDeskTicketRepository,
@@ -85,6 +97,10 @@ import {
   PostgresFormDefinitionRepository,
   PostgresFormSubmissionRepository,
   PostgresHumanTaskRepository,
+  PostgresNotificationDeliveryRepository,
+  PostgresNotificationPreferenceRepository,
+  PostgresNotificationRepository,
+  PostgresNotificationTemplateRepository,
   PostgresQueueConfigurationRepository,
   PostgresQueueEntryRepository,
   PostgresQueueEventRepository,
@@ -113,6 +129,7 @@ import {
   WorkforceLifecycleService,
   type WorkforceLifecycleRepository,
 } from "./domains/workforce-lifecycle/index.js";
+import { createNotificationProvidersFromEnv } from "./notifications/webhook-provider.js";
 
 export interface AppContext {
   tenantRepository: TenantRepository;
@@ -147,6 +164,12 @@ export interface AppContext {
   queueEventRepository: QueueEventRepository;
   queueService: QueueService;
   queueCheckInService: QueueCheckInService;
+  notificationRepository: NotificationRepository;
+  notificationPreferenceRepository: NotificationPreferenceRepository;
+  notificationTemplateRepository: NotificationTemplateRepository;
+  notificationDeliveryRepository: NotificationDeliveryRepository;
+  notificationService: NotificationService;
+  notificationProviders: NotificationProviderMap;
   serviceDeskCatalogRepository: ServiceDeskCatalogRepository;
   serviceDeskTicketRepository: ServiceDeskTicketRepository;
   serviceDeskSlaPolicyRepository: ServiceDeskSlaPolicyRepository;
@@ -185,6 +208,10 @@ function assemble(
   queueConfigurationRepository: QueueConfigurationRepository,
   queueEntryRepository: QueueEntryRepository,
   queueEventRepository: QueueEventRepository,
+  notificationRepository: NotificationRepository,
+  notificationPreferenceRepository: NotificationPreferenceRepository,
+  notificationTemplateRepository: NotificationTemplateRepository,
+  notificationDeliveryRepository: NotificationDeliveryRepository,
   serviceDeskCatalogRepository: ServiceDeskCatalogRepository,
   serviceDeskTicketRepository: ServiceDeskTicketRepository,
   serviceDeskSlaPolicyRepository: ServiceDeskSlaPolicyRepository,
@@ -202,7 +229,50 @@ function assemble(
   const formSubmissionService = new SubmissionService(formSubmissionRepository, formDefinitionRepository, auditLog);
   const workflowEngineService = new WorkflowEngineService(workflowDefinitionRepository, workflowInstanceRepository, humanTaskRepository, auditLog);
   const approvalEngineService = new ApprovalEngineService(approvalPolicyRepository, approvalRequestRepository, auditLog);
-  const queueService = new QueueService(queueConfigurationRepository, queueEntryRepository, queueEventRepository, auditLog);
+  const notificationService = new NotificationService(
+    notificationRepository,
+    notificationPreferenceRepository,
+    notificationTemplateRepository,
+    notificationDeliveryRepository,
+    auditLog,
+  );
+  const notificationProviders = createNotificationProvidersFromEnv();
+  const queueService = new QueueService(
+    queueConfigurationRepository,
+    queueEntryRepository,
+    queueEventRepository,
+    auditLog,
+    async ({ entry, type, actorUserId, data }) => {
+      try {
+        const entitlements = await controlPlaneService.getEntitlements(entry.tenantId);
+        const notificationsEnabled = entitlements.modules.some((module) => module.key === "notifications" && module.enabled);
+        if (!notificationsEnabled) return;
+        await notificationService.notifyQueueEvent({
+          tenantId: entry.tenantId,
+          entry: {
+            id: entry.id,
+            publicToken: entry.publicToken,
+            ticketNumber: entry.ticketNumber,
+            branchId: entry.branchId,
+            serviceId: entry.serviceId,
+            customer: entry.customer,
+          },
+          eventType: type,
+          data,
+          actorUserId,
+        });
+      } catch (error) {
+        await auditLog.record({
+          tenantId: entry.tenantId,
+          actorUserId,
+          action: "notification.queue_fanout_failed",
+          targetType: "queue_entry",
+          targetId: entry.id,
+          metadata: { eventType: type, error: error instanceof Error ? error.message.slice(0, 500) : "Unknown notification failure" },
+        });
+      }
+    },
+  );
   const queueCheckInService = new QueueCheckInService(queueService, async (tenantId, appointmentId) => {
     const values = (await appointmentService.list(tenantId)).map((item) => item as unknown as Record<string, unknown>);
     const appointment = values.find((item) => item.id === appointmentId);
@@ -263,6 +333,12 @@ function assemble(
     queueEventRepository,
     queueService,
     queueCheckInService,
+    notificationRepository,
+    notificationPreferenceRepository,
+    notificationTemplateRepository,
+    notificationDeliveryRepository,
+    notificationService,
+    notificationProviders,
     serviceDeskCatalogRepository,
     serviceDeskTicketRepository,
     serviceDeskSlaPolicyRepository,
@@ -284,6 +360,7 @@ export function createAppContext(): AppContext {
     new InMemoryWorkflowDefinitionRepository(), new InMemoryWorkflowInstanceRepository(), new InMemoryHumanTaskRepository(),
     new InMemoryApprovalPolicyRepository(), new InMemoryApprovalRequestRepository(),
     new InMemoryQueueConfigurationRepository(), new InMemoryQueueEntryRepository(), new InMemoryQueueEventRepository(),
+    new InMemoryNotificationRepository(), new InMemoryNotificationPreferenceRepository(), new InMemoryNotificationTemplateRepository(), new InMemoryNotificationDeliveryRepository(),
     new InMemoryServiceDeskCatalogRepository(), new InMemoryServiceDeskTicketRepository(), new InMemoryServiceDeskSlaPolicyRepository(),
     new InMemoryCustomerIntelligenceRepository(), new InMemoryControlPlaneRepository(), new InMemoryAuditLog(), async () => {},
   );
@@ -300,6 +377,7 @@ export async function createPostgresAppContext(connectionString: string): Promis
     new PostgresWorkflowDefinitionRepository(db), new PostgresWorkflowInstanceRepository(db), new PostgresHumanTaskRepository(db),
     new PostgresApprovalPolicyRepository(db), new PostgresApprovalRequestRepository(db),
     new PostgresQueueConfigurationRepository(db), new PostgresQueueEntryRepository(db), new PostgresQueueEventRepository(db),
+    new PostgresNotificationRepository(db), new PostgresNotificationPreferenceRepository(db), new PostgresNotificationTemplateRepository(db), new PostgresNotificationDeliveryRepository(db),
     new PostgresServiceDeskCatalogRepository(db), new PostgresServiceDeskTicketRepository(db), new PostgresServiceDeskSlaPolicyRepository(db),
     new PostgresCustomerIntelligenceRepository(db), new PostgresControlPlaneRepository(db), new PostgresAuditLog(db), close,
   );
