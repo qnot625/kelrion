@@ -13,3 +13,8 @@ export * from "./postgres-employee-repository.js";
 export * from "./postgres-attendance-repository.js";
 export * from "./postgres-form-repository.js";
 export * from "./postgres-workflow-repository.js";
+export * from "./postgres-approval-repository.js";
+export * from "./postgres-service-desk-catalog-repository.js";
+export * from "./postgres-service-desk-repository.js";
+export * from "./postgres-queue-repository.js";
+export * from "./postgres-notification-repository.js";

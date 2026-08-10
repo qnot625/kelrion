@@ -26,7 +26,25 @@ export type Permission =
   | "workflow:view"
   | "workflow:start"
   | "workflow:task"
-  | "workflow:manage";
+  | "workflow:manage"
+  | "approvals:view"
+  | "approvals:request"
+  | "approvals:decide"
+  | "approvals:manage"
+  | "queue:view"
+  | "queue:checkin"
+  | "queue:serve"
+  | "queue:manage"
+  | "notifications:view"
+  | "notifications:preferences"
+  | "notifications:send"
+  | "notifications:manage"
+  | "service_desk:view"
+  | "service_desk:create"
+  | "service_desk:comment"
+  | "service_desk:manage"
+  | "service_desk:sla"
+  | "service_desk:catalog";
 
 const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
   owner: [
@@ -37,6 +55,10 @@ const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     "attendance:clock", "attendance:read", "attendance:sync", "attendance:manage",
     "forms:submit", "forms:manage",
     "workflow:view", "workflow:start", "workflow:task", "workflow:manage",
+    "approvals:view", "approvals:request", "approvals:decide", "approvals:manage",
+    "queue:view", "queue:checkin", "queue:serve", "queue:manage",
+    "notifications:view", "notifications:preferences", "notifications:send", "notifications:manage",
+    "service_desk:view", "service_desk:create", "service_desk:comment", "service_desk:manage", "service_desk:sla", "service_desk:catalog",
   ],
   staff: [
     "appointments:book", "appointments:manage", "appointments:view",
@@ -46,12 +68,20 @@ const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     "attendance:clock", "attendance:read", "attendance:sync", "attendance:manage",
     "forms:submit", "forms:manage",
     "workflow:view", "workflow:start", "workflow:task", "workflow:manage",
+    "approvals:view", "approvals:request", "approvals:decide", "approvals:manage",
+    "queue:view", "queue:checkin", "queue:serve", "queue:manage",
+    "notifications:view", "notifications:preferences", "notifications:send", "notifications:manage",
+    "service_desk:view", "service_desk:create", "service_desk:comment", "service_desk:manage", "service_desk:sla", "service_desk:catalog",
   ],
   member: [
     "appointments:book", "leave:request", "lifecycle:view", "cases:create",
     "employees:read", "attendance:clock", "attendance:read", "attendance:sync",
     "forms:submit",
     "workflow:view", "workflow:start", "workflow:task",
+    "approvals:view", "approvals:request", "approvals:decide",
+    "queue:view", "queue:checkin",
+    "notifications:view", "notifications:preferences",
+    "service_desk:view", "service_desk:create", "service_desk:comment",
   ],
 };
 

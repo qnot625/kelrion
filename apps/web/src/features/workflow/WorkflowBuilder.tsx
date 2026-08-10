@@ -17,12 +17,7 @@ function nextStepId(type: ApiWorkflowStepType, count: number) {
   return `${type.toLowerCase()}_${Date.now()}_${count}`;
 }
 
-export function WorkflowBuilder({
-  session,
-  initial,
-  onSaved,
-  onClose,
-}: {
+export function WorkflowBuilder({ session, initial, onSaved, onClose }: {
   readonly session: KlerionSession;
   readonly initial?: ApiWorkflowDefinition;
   readonly onSaved: (definition: ApiWorkflowDefinition) => void;
@@ -47,7 +42,9 @@ export function WorkflowBuilder({
     const endId = steps.find((step) => step.type === "END")?.id ?? "end";
     const step: ApiWorkflowStep = type === "AUTOMATIC_TASK"
       ? { id, name: "Set workflow data", type, automaticConfig: { operation: "SET_VARIABLES", values: {} }, transitions: [{ targetStepId: endId }] }
-      : { id, name: type === "APPROVAL_TASK" ? "Approval" : "Manual task", type, taskConfig: { candidateRoles: ["staff", "owner"], dueInMinutes: 1440 }, transitions: [{ targetStepId: endId }] };
+      : type === "APPROVAL_TASK"
+        ? { id, name: "Approval", type, taskConfig: { candidateRoles: ["owner", "staff"], dueInMinutes: 1440 }, metadata: { approvalPolicyId: "" }, transitions: [{ targetStepId: endId }] }
+        : { id, name: "Manual task", type, taskConfig: { candidateRoles: ["staff", "owner"], dueInMinutes: 1440 }, transitions: [{ targetStepId: endId }] };
     const next = [...steps];
     const insertAt = endIndex >= 0 ? endIndex : next.length;
     next.splice(insertAt, 0, step);
@@ -82,6 +79,9 @@ export function WorkflowBuilder({
     setWorking(true);
     setError("");
     try {
+      const invalidApproval = steps.find((step) => step.type === "APPROVAL_TASK" && typeof step.metadata?.approvalPolicyId !== "string");
+      const emptyApproval = steps.find((step) => step.type === "APPROVAL_TASK" && !String(step.metadata?.approvalPolicyId ?? "").trim());
+      if (invalidApproval || emptyApproval) throw new Error("Every approval task must reference a published Approval Policy ID.");
       const start = steps.find((step) => step.type === "START");
       let saved = initial
         ? await workflowApi.updateDefinition(session, initial.id, { name, description, startStepId: start?.id, steps, triggers: trigger() })
@@ -129,14 +129,14 @@ export function WorkflowBuilder({
                 {step.type !== "START" && step.type !== "END" && <div className="row-actions"><button onClick={() => move(index, -1)}><ArrowUp size={14} /></button><button onClick={() => move(index, 1)}><ArrowDown size={14} /></button><button onClick={() => remove(step.id)}><Trash2 size={14} /></button></div>}
               </div>
 
-              {(step.type === "MANUAL_TASK" || step.type === "APPROVAL_TASK") && <div className="workflow-step-config"><label>Candidate roles<input value={(step.taskConfig?.candidateRoles ?? []).join(", ")} onChange={(event) => patchStep(step.id, { taskConfig: { ...step.taskConfig, candidateRoles: event.target.value.split(",").map((role) => role.trim()).filter(Boolean) } })} /></label><label>Due in minutes<input type="number" value={step.taskConfig?.dueInMinutes ?? ""} onChange={(event) => patchStep(step.id, { taskConfig: { ...step.taskConfig, dueInMinutes: event.target.value ? Number(event.target.value) : null } })} /></label></div>}
+              {(step.type === "MANUAL_TASK" || step.type === "APPROVAL_TASK") && <div className="workflow-step-config"><label>Candidate roles<input value={(step.taskConfig?.candidateRoles ?? []).join(", ")} onChange={(event) => patchStep(step.id, { taskConfig: { ...step.taskConfig, candidateRoles: event.target.value.split(",").map((role) => role.trim()).filter(Boolean) } })} /></label><label>Due in minutes<input type="number" value={step.taskConfig?.dueInMinutes ?? ""} onChange={(event) => patchStep(step.id, { taskConfig: { ...step.taskConfig, dueInMinutes: event.target.value ? Number(event.target.value) : null } })} /></label>{step.type === "APPROVAL_TASK" && <label>Approval policy ID<input value={String(step.metadata?.approvalPolicyId ?? "")} onChange={(event) => patchStep(step.id, { metadata: { ...step.metadata, approvalPolicyId: event.target.value } })} placeholder="Published policy UUID" /></label>}</div>}
 
               {step.type === "AUTOMATIC_TASK" && <label className="workflow-json-field">Set variables (JSON)<textarea value={JSON.stringify(step.automaticConfig?.values ?? {}, null, 2)} onChange={(event) => {
                 try { patchStep(step.id, { automaticConfig: { operation: "SET_VARIABLES", values: JSON.parse(event.target.value) as Record<string, unknown> } }); setError(""); }
                 catch { setError("Automatic task variables must be valid JSON before saving."); }
               }} /></label>}
 
-              {step.type !== "END" && <div className="workflow-transitions"><strong>Transitions</strong>{step.transitions.map((transition, transitionIndex) => <div className="workflow-transition" key={`${step.id}-${transitionIndex}`}><select value={transition.targetStepId} onChange={(event) => patchStep(step.id, { transitions: step.transitions.map((item, i) => i === transitionIndex ? { ...item, targetStepId: event.target.value } : item) })}>{steps.filter((candidate) => candidate.id !== step.id).map((candidate) => <option key={candidate.id} value={candidate.id}>{candidate.name} · {candidate.id}</option>)}</select><label className="form-checkbox"><input type="checkbox" checked={Boolean(transition.isDefault)} onChange={(event) => patchStep(step.id, { transitions: step.transitions.map((item, i) => i === transitionIndex ? { ...item, isDefault: event.target.checked, condition: event.target.checked ? undefined : item.condition } : item) })} /> Default</label>{!transition.isDefault && <><input placeholder="Variable, e.g. amount" value={transition.condition?.field ?? ""} onChange={(event) => patchStep(step.id, { transitions: step.transitions.map((item, i) => i === transitionIndex ? { ...item, condition: { field: event.target.value, operator: item.condition?.operator ?? "EQUALS", value: item.condition?.value ?? "" } } : item) })} /><select value={transition.condition?.operator ?? "EQUALS"} onChange={(event) => patchStep(step.id, { transitions: step.transitions.map((item, i) => i === transitionIndex ? { ...item, condition: { field: item.condition?.field ?? "", operator: event.target.value as ApiWorkflowConditionOperator, value: item.condition?.value } } : item) })}><option value="EQUALS">Equals</option><option value="NOT_EQUALS">Not equals</option><option value="GREATER_THAN">Greater than</option><option value="LESS_THAN">Less than</option><option value="CONTAINS">Contains</option><option value="IS_SET">Is set</option><option value="IS_NOT_SET">Is not set</option></select><input placeholder="Value" value={String(transition.condition?.value ?? "")} onChange={(event) => patchStep(step.id, { transitions: step.transitions.map((item, i) => i === transitionIndex ? { ...item, condition: { field: item.condition?.field ?? "", operator: item.condition?.operator ?? "EQUALS", value: event.target.value } } : item) })} /></>}</div>)}</div>}
+              {step.type !== "END" && <div className="workflow-transitions"><strong>Transitions</strong>{step.transitions.map((transition, transitionIndex) => <div className="workflow-transition" key={`${step.id}-${transitionIndex}`}><select value={transition.targetStepId} onChange={(event) => patchStep(step.id, { transitions: step.transitions.map((item, i) => i === transitionIndex ? { ...item, targetStepId: event.target.value } : item) })}>{steps.filter((candidate) => candidate.id !== step.id).map((candidate) => <option key={candidate.id} value={candidate.id}>{candidate.name} · {candidate.id}</option>)}</select><label className="form-checkbox"><input type="checkbox" checked={Boolean(transition.isDefault)} onChange={(event) => patchStep(step.id, { transitions: step.transitions.map((item, i) => i === transitionIndex ? { ...item, isDefault: event.target.checked, condition: event.target.checked ? undefined : item.condition } : item) })} /> Default</label>{!transition.isDefault && <><input placeholder="Variable, e.g. approvalDecision" value={transition.condition?.field ?? ""} onChange={(event) => patchStep(step.id, { transitions: step.transitions.map((item, i) => i === transitionIndex ? { ...item, condition: { field: event.target.value, operator: item.condition?.operator ?? "EQUALS", value: item.condition?.value ?? "" } } : item) })} /><select value={transition.condition?.operator ?? "EQUALS"} onChange={(event) => patchStep(step.id, { transitions: step.transitions.map((item, i) => i === transitionIndex ? { ...item, condition: { field: item.condition?.field ?? "", operator: event.target.value as ApiWorkflowConditionOperator, value: item.condition?.value } } : item) })}><option value="EQUALS">Equals</option><option value="NOT_EQUALS">Not equals</option><option value="GREATER_THAN">Greater than</option><option value="LESS_THAN">Less than</option><option value="CONTAINS">Contains</option><option value="IS_SET">Is set</option><option value="IS_NOT_SET">Is not set</option></select><input placeholder="Value" value={String(transition.condition?.value ?? "")} onChange={(event) => patchStep(step.id, { transitions: step.transitions.map((item, i) => i === transitionIndex ? { ...item, condition: { field: item.condition?.field ?? "", operator: item.condition?.operator ?? "EQUALS", value: event.target.value } } : item) })} /></>}</div>)}</div>}
             </div>
           </article>
         ))}

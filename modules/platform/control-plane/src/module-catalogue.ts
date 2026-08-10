@@ -28,12 +28,7 @@ export interface ModuleDefinition {
   readonly availability: "live" | "preview";
 }
 
-const price = (ngn: number, usd: number, gbp: number, eur: number): ModuleDefinition["prices"] => ({
-  NGN: ngn,
-  USD: usd,
-  GBP: gbp,
-  EUR: eur,
-});
+const price = (ngn: number, usd: number, gbp: number, eur: number): ModuleDefinition["prices"] => ({ NGN: ngn, USD: usd, GBP: gbp, EUR: eur });
 
 export const MODULE_CATALOGUE: readonly ModuleDefinition[] = [
   { key: "branches", name: "Branches & Services", description: "Locations, departments, service catalogue and capacity discovery.", category: "customer-operations", dependencies: [], prices: price(600000, 3900, 3200, 3600), availability: "live" },
@@ -47,7 +42,7 @@ export const MODULE_CATALOGUE: readonly ModuleDefinition[] = [
   { key: "forms", name: "Dynamic Forms", description: "Versioned form definitions, validation and submissions.", category: "service-operations", dependencies: [], prices: price(400000, 2600, 2100, 2400), availability: "live" },
   { key: "workflow", name: "Workflow Automation", description: "Versioned state machines, human tasks, delegation and history.", category: "service-operations", dependencies: ["forms"], prices: price(650000, 4200, 3400, 3800), availability: "live" },
   { key: "approvals", name: "Approvals", description: "Approval inbox, decisions, reassignment and information requests.", category: "service-operations", dependencies: ["workflow"], prices: price(350000, 2300, 1900, 2100), availability: "live" },
-  { key: "service-desk", name: "Internal Service Desk", description: "Employee service requests, agent triage, comments and SLAs.", category: "service-operations", dependencies: ["forms", "workflow"], prices: price(600000, 3900, 3200, 3600), availability: "live" },
+  { key: "service-desk", name: "Internal Service Desk", description: "Employee service requests, request catalogue, agent triage, approvals, fulfilment workflows, comments and SLAs.", category: "service-operations", dependencies: ["forms", "workflow", "approvals"], prices: price(600000, 3900, 3200, 3600), availability: "live" },
   { key: "cases", name: "Cases & Complaints", description: "Customer cases, ownership, priorities, comments and SLA resolution.", category: "service-operations", dependencies: [], prices: price(500000, 3200, 2600, 2900), availability: "live" },
   { key: "analytics", name: "Executive Intelligence", description: "Operational scorecards, trends, SLA compliance and command-centre reporting.", category: "intelligence", dependencies: [], prices: price(450000, 2900, 2400, 2700), availability: "live" },
   { key: "recruitment", name: "Recruitment", description: "Candidate pipeline and interview operations.", category: "workforce", dependencies: ["employees"], prices: price(400000, 2600, 2100, 2400), availability: "preview" },
@@ -61,8 +56,11 @@ export function getModuleDefinition(key: ModuleKey): ModuleDefinition {
   return definition;
 }
 
-export function isModuleKey(value: string): value is ModuleKey {
-  return BY_KEY.has(value as ModuleKey);
+export function isModuleKey(value: string): value is ModuleKey { return BY_KEY.has(value as ModuleKey); }
+
+export function assertLiveModuleSelection(selection: readonly ModuleKey[]): void {
+  const preview = selection.filter((key) => getModuleDefinition(key).availability !== "live");
+  if (preview.length) throw new Error(`Preview modules cannot be enabled on live subscriptions: ${preview.join(", ")}`);
 }
 
 export function expandModuleSelection(selection: readonly ModuleKey[]): ModuleKey[] {

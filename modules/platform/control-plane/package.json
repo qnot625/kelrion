@@ -5,7 +5,7 @@
   "type": "module",
   "exports": "./src/index.ts",
   "scripts": {
-    "test": "node --import tsx --test tests/control-plane.test.ts"
+    "test": "node --import tsx --test tests/control-plane.test.ts tests/platform-operations.test.ts"
   },
   "dependencies": {
     "@adminops/identity": "*",

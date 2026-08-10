@@ -11,7 +11,6 @@ import {
 import { HumanTask, WorkflowInstance } from "./instance.js";
 import type { HumanTaskRepository, WorkflowDefinitionRepository, WorkflowInstanceRepository } from "./repositories.js";
 import type {
-  HumanTaskData,
   WorkflowCondition,
   WorkflowInstanceStatus,
   WorkflowMetadata,
@@ -43,7 +42,6 @@ export function evaluateWorkflowCondition(condition: WorkflowCondition, variable
     case "IN": return Array.isArray(condition.value) && condition.value.some((item) => item === actual);
     case "IS_SET": return actual !== undefined && actual !== null && actual !== "";
     case "IS_NOT_SET": return actual === undefined || actual === null || actual === "";
-    case "ALWAYS": return true;
   }
 }
 
@@ -177,6 +175,7 @@ export class WorkflowEngineService {
       variables: input.variables,
       startStep,
     });
+    await this.instances.save(instance);
     await this.runUntilWaitOrTerminal(instance, definition, input.actorUserId);
     await this.instances.save(instance);
     await this.audit("workflow.instance_started", input.tenantId, input.actorUserId, "workflow_instance", instance.id, {

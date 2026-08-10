@@ -1,0 +1,13 @@
+{
+  "name": "@adminops/service-desk",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": "./src/index.ts",
+  "scripts": {
+    "test": "node --import tsx --test tests/service-desk.test.ts"
+  },
+  "dependencies": {
+    "@adminops/audit": "*"
+  }
+}

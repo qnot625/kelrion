@@ -1,7 +1,9 @@
 import type { FastifyInstance } from "fastify";
 import {
+  buildPlatformOperationalReport,
   isModuleKey,
   type BillingCycle,
+  type BillingLifecycleService,
   type ControlPlaneService,
   type ModuleKey,
   type SubscriptionStatus,
@@ -19,10 +21,28 @@ function modules(value: unknown): ModuleKey[] | undefined {
 function billingCycle(value: unknown): value is BillingCycle { return value === "monthly" || value === "annual"; }
 function currency(value: unknown): value is SupportedCurrency { return value === "NGN" || value === "USD" || value === "GBP" || value === "EUR"; }
 
-export function registerPlatformAdminRoutes(app: FastifyInstance, service: ControlPlaneService): void {
+export function registerPlatformAdminRoutes(
+  app: FastifyInstance,
+  service: ControlPlaneService,
+  billingLifecycle?: BillingLifecycleService,
+): void {
   app.get("/platform/modules", async () => service.listModules());
 
   app.get("/platform/organisations", async () => service.listOrganisations());
+
+  app.get("/platform/reporting/overview", { preHandler: requirePlatformRole("billing_admin") }, async () => {
+    const [organisations, invoices] = await Promise.all([service.listOrganisations(), service.listInvoices()]);
+    return buildPlatformOperationalReport({
+      organisationStatuses: organisations.map((organisation) => organisation.status),
+      subscriptions: organisations.flatMap((organisation) => organisation.subscription ? [organisation.subscription] : []),
+      invoices,
+    });
+  });
+
+  app.post("/platform/billing/reconcile", { preHandler: requirePlatformRole("billing_admin") }, async (request, reply) => {
+    if (!billingLifecycle) return reply.code(503).send({ error: "Billing lifecycle service is unavailable" });
+    return reply.send(await billingLifecycle.reconcile());
+  });
 
   app.post("/platform/organisations", { preHandler: requirePlatformRole("god_admin") }, async (request, reply) => {
     const body = request.body as Record<string, unknown>;
@@ -77,6 +97,7 @@ export function registerPlatformAdminRoutes(app: FastifyInstance, service: Contr
       }));
     } catch (error) {
       if (error instanceof Error && error.message === "Subscription not found") return reply.code(404).send({ error: error.message });
+      if (error instanceof Error && error.message.includes("Preview modules")) return reply.code(400).send({ error: error.message });
       throw error;
     }
   });
@@ -91,7 +112,9 @@ export function registerPlatformAdminRoutes(app: FastifyInstance, service: Contr
     if (typeof body?.paymentReference !== "string" || !body.paymentReference.trim()) {
       return reply.code(400).send({ error: "paymentReference is required" });
     }
-    const invoice = await service.markInvoicePaid(request.params.id, body.paymentReference.trim());
+    const invoice = billingLifecycle
+      ? await billingLifecycle.markInvoicePaid(request.params.id, body.paymentReference.trim())
+      : await service.markInvoicePaid(request.params.id, body.paymentReference.trim());
     return invoice ? reply.send(invoice) : reply.code(404).send({ error: "Invoice not found" });
   });
 }

@@ -7,6 +7,7 @@ import {
   InMemoryControlPlaneRepository,
   ModuleNotEnabledError,
   PlatformAdminAuthService,
+  assertLiveModuleSelection,
   expandModuleSelection,
 } from "../src/index.js";
 
@@ -14,6 +15,25 @@ const secret = new TextEncoder().encode("control-plane-test-secret");
 
 test("expands module dependencies deterministically", () => {
   assert.deepEqual(expandModuleSelection(["attendance", "approvals"]), ["employees", "attendance", "forms", "workflow", "approvals"]);
+});
+
+test("preview modules cannot be enabled on live subscriptions", async () => {
+  assert.doesNotThrow(() => assertLiveModuleSelection(["queue", "notifications"]));
+  assert.throws(() => assertLiveModuleSelection(["recruitment"]), /Preview modules cannot be enabled/);
+
+  const tenants = new InMemoryTenantRepository();
+  const users = new InMemoryUserRepository();
+  const repository = new InMemoryControlPlaneRepository();
+  const service = new ControlPlaneService(repository, tenants, users);
+  await assert.rejects(() => service.createOrganisation({
+    name: "Preview Co",
+    slug: "preview-co",
+    ownerEmail: "owner@preview.test",
+    ownerPassword: "correct-horse",
+    enabledModules: ["recruitment"],
+    currency: "NGN",
+    billingCycle: "monthly",
+  }), /Preview modules cannot be enabled/);
 });
 
 test("provisions an organisation with owner, entitlements and invoice", async () => {
@@ -39,6 +59,7 @@ test("provisions an organisation with owner, entitlements and invoice", async ()
   assert.equal((await service.listInvoices(organisation.id)).length, 1);
   await service.assertModuleEnabled(organisation.id, "queue");
   await assert.rejects(() => service.assertModuleEnabled(organisation.id, "forms"), ModuleNotEnabledError);
+  await assert.rejects(() => service.updateSubscription(organisation.id, { enabledModules: ["recruitment"] }), /Preview modules cannot be enabled/);
 });
 
 test("supports self-service signup and platform administrator authentication", async () => {
