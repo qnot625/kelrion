@@ -1,5 +1,5 @@
 import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
-import type * as schema from "./schema.js";
+import type { schema } from "./schema/index.js";
 
 /**
  * Driver-agnostic handle: the same repositories run against node-postgres in

@@ -4,7 +4,7 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import { sql } from "drizzle-orm";
 import pg from "pg";
 import type { Database } from "./database.js";
-import * as schema from "./schema.js";
+import { schema } from "./schema/index.js";
 
 export interface PostgresConnection {
   db: Database;

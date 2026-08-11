@@ -13,3 +13,4 @@ export * from "./in-memory-service-repository.js";
 export * from "./waitlist.js";
 export * from "./waitlist-repository.js";
 export * from "./in-memory-waitlist-repository.js";
+export * from "./infrastructure/db/schema.js";

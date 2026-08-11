@@ -5,3 +5,4 @@ export * from "./password.js";
 export * from "./session-token.js";
 export * from "./auth-service.js";
 export * from "./permission.js";
+export * from "./infrastructure/db/schema.js";

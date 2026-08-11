@@ -1,4 +1,4 @@
-export * as schema from "./schema.js";
+export * as schema from "./schema/index.js";
 export * from "./database.js";
 export * from "./connect.js";
 export * from "./postgres-tenant-repository.js";

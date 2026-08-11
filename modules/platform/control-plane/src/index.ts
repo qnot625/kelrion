@@ -8,3 +8,4 @@ export * from "./repository.js";
 export * from "./in-memory-repository.js";
 export * from "./platform-admin-auth-service.js";
 export * from "./service.js";
+export * from "./infrastructure/db/schema.js";
