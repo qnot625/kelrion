@@ -14,10 +14,23 @@ import {
   validateOperatingWindows,
   validateHolidayRange,
   validateDepartmentCapacity,
-} from "@adminops/branch-flow";
-import type { Database } from "./database.js";
+} from "../../index.js";
+import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
+type Database = PgDatabase<PgQueryResultHKT, any>;
 import { branches, branchOperatingWindows, branchHolidays, departments, branchServices, appointments } from "./schema.js";
-import { isUniqueViolation } from "./pg-errors.js";
+
+const UNIQUE_VIOLATION = "23505";
+
+function isUniqueViolation(error: unknown): boolean {
+  let current: unknown = error;
+  for (let depth = 0; current && depth < 5; depth += 1) {
+    if (typeof current === "object" && "code" in current && current.code === UNIQUE_VIOLATION) {
+      return true;
+    }
+    current = typeof current === "object" && "cause" in current ? current.cause : undefined;
+  }
+  return false;
+}
 
 type BranchRow = typeof branches.$inferSelect;
 type OperatingWindowRow = typeof branchOperatingWindows.$inferSelect;
@@ -34,7 +47,6 @@ function toDepartmentRef(row: DepartmentRow): DepartmentRef {
     capacity: row.capacity,
   };
 }
-
 
 function toBranchRef(row: BranchRow): BranchRef {
   return {
@@ -321,7 +333,6 @@ export class PostgresBranchRepository implements BranchRepository {
       .where(and(eq(branchHolidays.id, id), eq(branchHolidays.tenantId, tenantId)));
   }
 
-  // Department Operations
   async createDepartment(department: Omit<DepartmentRef, "id">): Promise<DepartmentRef> {
     validateDepartmentCapacity(department.capacity);
     try {
@@ -410,4 +421,3 @@ export class PostgresBranchRepository implements BranchRepository {
       .where(and(eq(departments.id, id), eq(departments.tenantId, tenantId)));
   }
 }
-

@@ -1,5 +1,4 @@
 import { and, asc, desc, eq } from "drizzle-orm";
-import { bigint, boolean, index, integer, jsonb, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 import {
   ServiceDeskSlaPolicy,
   ServiceDeskTicket,
@@ -14,84 +13,9 @@ import {
   type ServiceDeskTicketRepository,
   type ServiceDeskTicketStatus,
   type ServiceDeskTicketType,
-} from "@adminops/service-desk";
-import type { Database } from "./database.js";
-import { tenants } from "./schema.js";
-
-const serviceDeskSlaPolicies = pgTable("service_desk_sla_policies", {
-  id: uuid("id").primaryKey(),
-  tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
-  name: text("name").notNull(),
-  description: text("description").notNull().default(""),
-  enabled: boolean("enabled").notNull().default(true),
-  ticketTypes: jsonb("ticket_types").notNull().default([]),
-  priorities: jsonb("priorities").notNull().default([]),
-  categoryKeys: jsonb("category_keys").notNull().default([]),
-  firstResponseMinutes: integer("first_response_minutes").notNull(),
-  resolutionMinutes: integer("resolution_minutes").notNull(),
-  pauseStatuses: jsonb("pause_statuses").notNull().default([]),
-  escalationThresholds: jsonb("escalation_thresholds").notNull().default([]),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull(),
-}, (table) => [index("service_desk_sla_policies_tenant_idx").on(table.tenantId, table.enabled, table.updatedAt)]);
-
-const serviceDeskTickets = pgTable("service_desk_tickets", {
-  id: uuid("id").primaryKey(),
-  tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
-  reference: text("reference").notNull(),
-  type: text("type").notNull(),
-  priority: text("priority").notNull(),
-  status: text("status").notNull(),
-  subject: text("subject").notNull(),
-  description: text("description").notNull().default(""),
-  categoryKey: text("category_key"),
-  requester: jsonb("requester").notNull().default({}),
-  source: text("source").notNull(),
-  assignmentGroupId: text("assignment_group_id"),
-  assigneeUserId: uuid("assignee_user_id"),
-  watcherUserIds: jsonb("watcher_user_ids").notNull().default([]),
-  tags: jsonb("tags").notNull().default([]),
-  workflowInstanceId: uuid("workflow_instance_id"),
-  approvalRequestId: uuid("approval_request_id"),
-  slaPolicyId: uuid("sla_policy_id").references(() => serviceDeskSlaPolicies.id, { onDelete: "set null" }),
-  firstResponseDueAt: timestamp("first_response_due_at", { withTimezone: true }),
-  resolutionDueAt: timestamp("resolution_due_at", { withTimezone: true }),
-  firstRespondedAt: timestamp("first_responded_at", { withTimezone: true }),
-  resolvedAt: timestamp("resolved_at", { withTimezone: true }),
-  closedAt: timestamp("closed_at", { withTimezone: true }),
-  cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
-  pausedAt: timestamp("paused_at", { withTimezone: true }),
-  accumulatedPausedMs: bigint("accumulated_paused_ms", { mode: "number" }).notNull().default(0),
-  escalationLevel: integer("escalation_level").notNull().default(0),
-  createdByUserId: uuid("created_by_user_id").notNull(),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull(),
-}, (table) => [
-  index("service_desk_tickets_tenant_status_idx").on(table.tenantId, table.status, table.updatedAt),
-  index("service_desk_tickets_assignee_idx").on(table.tenantId, table.assigneeUserId, table.status, table.updatedAt),
-]);
-
-const serviceDeskComments = pgTable("service_desk_comments", {
-  id: uuid("id").primaryKey(),
-  tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
-  ticketId: uuid("ticket_id").notNull().references(() => serviceDeskTickets.id, { onDelete: "cascade" }),
-  authorUserId: uuid("author_user_id").notNull(),
-  visibility: text("visibility").notNull(),
-  body: text("body").notNull().default(""),
-  attachments: jsonb("attachments").notNull().default([]),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
-}, (table) => [index("service_desk_comments_ticket_idx").on(table.tenantId, table.ticketId, table.createdAt)]);
-
-const serviceDeskStatusEvents = pgTable("service_desk_status_events", {
-  id: uuid("id").primaryKey(),
-  tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
-  ticketId: uuid("ticket_id").notNull().references(() => serviceDeskTickets.id, { onDelete: "cascade" }),
-  fromStatus: text("from_status"),
-  toStatus: text("to_status").notNull(),
-  actorUserId: uuid("actor_user_id").notNull(),
-  reason: text("reason").notNull().default(""),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
-}, (table) => [index("service_desk_status_events_ticket_idx").on(table.tenantId, table.ticketId, table.createdAt)]);
+} from "../../index.js";
+import type { Database } from "@adminops/persistence";
+import { serviceDeskSlaPolicies, serviceDeskTickets, serviceDeskComments, serviceDeskStatusEvents } from "./schema.js";
 
 type SlaRow = typeof serviceDeskSlaPolicies.$inferSelect;
 type TicketRow = typeof serviceDeskTickets.$inferSelect;

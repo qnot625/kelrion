@@ -11,9 +11,9 @@ import type {
   BreakInterval,
   CreateAttendanceCorrectionInput,
   CorrectionStatus,
-} from "@adminops/workforce-core";
-import { AttendanceCorrectionNotFoundError } from "@adminops/workforce-core";
-import type { Database } from "./database.js";
+} from "../../index.js";
+import { AttendanceCorrectionNotFoundError } from "../../index.js";
+import type { Database } from "@adminops/persistence";
 
 async function queryRows<T>(db: Database, statement: SQL): Promise<T[]> {
   const result = await db.execute(statement);

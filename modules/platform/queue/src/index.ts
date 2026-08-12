@@ -6,3 +6,5 @@ export * from "./repositories.js";
 export * from "./in-memory.js";
 export * from "./queue-service.js";
 export * from "./check-in-service.js";
+export * from "./infrastructure/db/schema.js";
+export * from "./infrastructure/db/postgres-queue-repository.js";

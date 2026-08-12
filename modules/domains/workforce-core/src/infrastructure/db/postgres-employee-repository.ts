@@ -6,8 +6,8 @@ import {
   type EmployeeState,
   type EmploymentStatus,
   type EmploymentType,
-} from "@adminops/workforce-core";
-import type { Database } from "./database.js";
+} from "../../index.js";
+import type { Database } from "@adminops/persistence";
 
 interface EmployeeRow {
   id: string;

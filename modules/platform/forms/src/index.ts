@@ -9,3 +9,4 @@ export * from "./form-submission.js";
 export * from "./form-submission-repository.js";
 export * from "./in-memory-form-submission-repository.js";
 export * from "./submission-service.js";
+export * from "./infrastructure/db/postgres-form-repository.js";

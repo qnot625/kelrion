@@ -1,0 +1,72 @@
+import { bigint, boolean, index, integer, jsonb, pgTable, primaryKey, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import type { QueueCustomerReference } from "../../index.js";
+
+export const queueConfigurations = pgTable("queue_configurations", {
+  id: uuid("id").primaryKey(),
+  tenantId: uuid("tenant_id").notNull(),
+  branchId: uuid("branch_id").notNull(),
+  serviceId: uuid("service_id").notNull(),
+  departmentId: uuid("department_id"),
+  prefix: text("prefix").notNull(),
+  averageServiceMinutes: integer("average_service_minutes").notNull(),
+  allowWalkIns: boolean("allow_walk_ins").notNull().default(true),
+  allowAppointmentCheckIn: boolean("allow_appointment_check_in").notNull().default(true),
+  maxEarlyCheckInMinutes: integer("max_early_check_in_minutes"),
+  maxLateCheckInMinutes: integer("max_late_check_in_minutes"),
+  maxConcurrentServing: integer("max_concurrent_serving").notNull().default(1),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull(),
+}, (table) => [index("queue_configurations_tenant_branch_idx").on(table.tenantId, table.branchId, table.serviceId)]);
+
+export const queueEntries = pgTable("queue_entries", {
+  id: uuid("id").primaryKey(),
+  tenantId: uuid("tenant_id").notNull(),
+  publicToken: uuid("public_token").notNull(),
+  ticketNumber: text("ticket_number").notNull(),
+  kind: text("kind").notNull(),
+  branchId: uuid("branch_id").notNull(),
+  serviceId: uuid("service_id").notNull(),
+  departmentId: uuid("department_id"),
+  appointmentId: uuid("appointment_id"),
+  customer: jsonb("customer").$type<QueueCustomerReference>().notNull().default({}),
+  priority: text("priority").notNull(),
+  priorityAdjustment: integer("priority_adjustment").notNull().default(0),
+  priorityScore: integer("priority_score").notNull(),
+  checkInSource: text("check_in_source").notNull(),
+  status: text("status").notNull(),
+  stationId: text("station_id"),
+  servingStaffUserId: uuid("serving_staff_user_id"),
+  recallCount: integer("recall_count").notNull().default(0),
+  checkedInAt: timestamp("checked_in_at", { withTimezone: true }).notNull(),
+  calledAt: timestamp("called_at", { withTimezone: true }),
+  serviceStartedAt: timestamp("service_started_at", { withTimezone: true }),
+  completedAt: timestamp("completed_at", { withTimezone: true }),
+  noShowAt: timestamp("no_show_at", { withTimezone: true }),
+  cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
+  transferredAt: timestamp("transferred_at", { withTimezone: true }),
+  idempotencyKey: text("idempotency_key"),
+  transferFromEntryId: uuid("transfer_from_entry_id"),
+  metadata: jsonb("metadata").$type<Record<string, unknown>>().notNull().default({}),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull(),
+}, (table) => [
+  index("queue_entries_waiting_idx").on(table.tenantId, table.branchId, table.serviceId, table.status, table.priorityScore, table.checkedInAt),
+  index("queue_entries_branch_status_idx").on(table.tenantId, table.branchId, table.status, table.updatedAt),
+]);
+
+export const queueEvents = pgTable("queue_events", {
+  tenantId: uuid("tenant_id").notNull(),
+  sequence: bigint("sequence", { mode: "number" }).notNull(),
+  id: uuid("id").notNull(),
+  branchId: uuid("branch_id").notNull(),
+  serviceId: uuid("service_id").notNull(),
+  entryId: uuid("entry_id").notNull().references(() => queueEntries.id, { onDelete: "cascade" }),
+  type: text("type").notNull(),
+  actorUserId: uuid("actor_user_id"),
+  data: jsonb("data").$type<Record<string, unknown>>().notNull().default({}),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+}, (table) => [
+  primaryKey({ columns: [table.tenantId, table.sequence] }),
+  index("queue_events_entry_idx").on(table.tenantId, table.entryId, table.sequence),
+  index("queue_events_branch_idx").on(table.tenantId, table.branchId, table.sequence),
+]);

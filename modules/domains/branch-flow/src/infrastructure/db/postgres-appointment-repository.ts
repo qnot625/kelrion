@@ -3,8 +3,9 @@ import type {
   Appointment,
   AppointmentRepository,
   AppointmentStatus,
-} from "@adminops/branch-flow";
-import type { Database } from "./database.js";
+} from "../../index.js";
+import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
+type Database = PgDatabase<PgQueryResultHKT, any>;
 import { appointments } from "./schema.js";
 
 type AppointmentRow = typeof appointments.$inferSelect;

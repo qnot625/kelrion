@@ -3,3 +3,4 @@ export * from "./tenant-repository.js";
 export * from "./in-memory-tenant-repository.js";
 export * from "./tenant-context.js";
 export * from "./infrastructure/db/schema.js";
+export * from "./infrastructure/db/postgres-tenant-repository.js";

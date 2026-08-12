@@ -1,5 +1,4 @@
 import { and, desc, eq } from "drizzle-orm";
-import { index, integer, jsonb, pgTable, primaryKey, text, timestamp, uuid } from "drizzle-orm/pg-core";
 import {
   ServiceDeskCatalogItem,
   type ServiceDeskCatalogItemData,
@@ -7,55 +6,9 @@ import {
   type ServiceDeskIntakeMode,
   type ServiceDeskPriority,
   type ServiceDeskTicketType,
-} from "@adminops/service-desk";
-import type { Database } from "./database.js";
-import { tenants } from "./schema.js";
-
-const catalogItems = pgTable("service_desk_catalog_items", {
-  id: uuid("id").primaryKey(),
-  tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
-  key: text("key").notNull(),
-  name: text("name").notNull(),
-  description: text("description").notNull().default(""),
-  status: text("status").notNull(),
-  currentVersion: integer("current_version").notNull(),
-  intakeMode: text("intake_mode").notNull(),
-  formDefinitionId: uuid("form_definition_id"),
-  workflowDefinitionId: uuid("workflow_definition_id"),
-  approvalPolicyId: uuid("approval_policy_id"),
-  defaultTicketType: text("default_ticket_type").notNull(),
-  defaultPriority: text("default_priority").notNull(),
-  categoryKey: text("category_key"),
-  assignmentGroupId: text("assignment_group_id"),
-  tags: jsonb("tags").$type<string[]>().notNull().default([]),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull(),
-  publishedAt: timestamp("published_at", { withTimezone: true }),
-  archivedAt: timestamp("archived_at", { withTimezone: true }),
-}, (table) => [index("service_desk_catalog_items_tenant_status_idx").on(table.tenantId, table.status, table.updatedAt)]);
-
-const catalogVersions = pgTable("service_desk_catalog_item_versions", {
-  tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
-  catalogItemId: uuid("catalog_item_id").notNull().references(() => catalogItems.id, { onDelete: "cascade" }),
-  version: integer("version").notNull(),
-  key: text("key").notNull(),
-  name: text("name").notNull(),
-  description: text("description").notNull().default(""),
-  intakeMode: text("intake_mode").notNull(),
-  formDefinitionId: uuid("form_definition_id"),
-  workflowDefinitionId: uuid("workflow_definition_id"),
-  approvalPolicyId: uuid("approval_policy_id"),
-  defaultTicketType: text("default_ticket_type").notNull(),
-  defaultPriority: text("default_priority").notNull(),
-  categoryKey: text("category_key"),
-  assignmentGroupId: text("assignment_group_id"),
-  tags: jsonb("tags").$type<string[]>().notNull().default([]),
-  publishedAt: timestamp("published_at", { withTimezone: true }).notNull(),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
-}, (table) => [
-  primaryKey({ columns: [table.tenantId, table.catalogItemId, table.version] }),
-  index("service_desk_catalog_versions_latest_idx").on(table.tenantId, table.catalogItemId, table.version),
-]);
+} from "../../index.js";
+import type { Database } from "@adminops/persistence";
+import { catalogItems, catalogVersions } from "./schema.js";
 
 type CurrentRow = typeof catalogItems.$inferSelect;
 type VersionRow = typeof catalogVersions.$inferSelect;

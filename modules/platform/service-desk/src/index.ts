@@ -7,3 +7,6 @@ export * from "./ticket.js";
 export * from "./repositories.js";
 export * from "./in-memory.js";
 export * from "./service.js";
+export * from "./infrastructure/db/schema.js";
+export * from "./infrastructure/db/postgres-service-desk-catalog-repository.js";
+export * from "./infrastructure/db/postgres-service-desk-repository.js";

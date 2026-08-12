@@ -1,5 +1,4 @@
 import { and, desc, eq, notInArray } from "drizzle-orm";
-import { index, integer, jsonb, pgTable, primaryKey, text, timestamp, uuid } from "drizzle-orm/pg-core";
 import {
   HumanTask,
   WorkflowDefinition,
@@ -17,93 +16,9 @@ import {
   type WorkflowStep,
   type WorkflowTrigger,
   type WorkflowTriggerType,
-} from "@adminops/workflow";
-import type { Database } from "./database.js";
-import { tenants, users } from "./schema.js";
-
-const workflowDefinitions = pgTable("workflow_definitions", {
-  id: uuid("id").primaryKey(),
-  tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
-  name: text("name").notNull(),
-  description: text("description").notNull().default(""),
-  status: text("status").notNull(),
-  currentVersion: integer("current_version").notNull(),
-  startStepId: text("start_step_id").notNull(),
-  steps: jsonb("steps").notNull().default([]),
-  triggers: jsonb("triggers").notNull().default([]),
-  metadata: jsonb("metadata").notNull().default({}),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull(),
-  publishedAt: timestamp("published_at", { withTimezone: true }),
-  archivedAt: timestamp("archived_at", { withTimezone: true }),
-}, (table) => [index("workflow_definitions_tenant_status_idx").on(table.tenantId, table.status, table.updatedAt)]);
-
-const workflowDefinitionVersions = pgTable("workflow_definition_versions", {
-  tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
-  workflowDefinitionId: uuid("workflow_definition_id").notNull().references(() => workflowDefinitions.id, { onDelete: "cascade" }),
-  version: integer("version").notNull(),
-  name: text("name").notNull(),
-  description: text("description").notNull().default(""),
-  startStepId: text("start_step_id").notNull(),
-  steps: jsonb("steps").notNull().default([]),
-  triggers: jsonb("triggers").notNull().default([]),
-  metadata: jsonb("metadata").notNull().default({}),
-  publishedAt: timestamp("published_at", { withTimezone: true }).notNull(),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
-}, (table) => [
-  primaryKey({ columns: [table.tenantId, table.workflowDefinitionId, table.version] }),
-  index("workflow_definition_versions_latest_idx").on(table.tenantId, table.workflowDefinitionId, table.version),
-]);
-
-const workflowInstances = pgTable("workflow_instances", {
-  id: uuid("id").primaryKey(),
-  tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
-  workflowDefinitionId: uuid("workflow_definition_id").notNull().references(() => workflowDefinitions.id, { onDelete: "cascade" }),
-  workflowVersion: integer("workflow_version").notNull(),
-  status: text("status").notNull(),
-  currentStepId: text("current_step_id"),
-  variables: jsonb("variables").notNull().default({}),
-  executionHistory: jsonb("execution_history").notNull().default([]),
-  startedByUserId: uuid("started_by_user_id").notNull(),
-  sourceType: text("source_type").notNull(),
-  sourceReferenceId: text("source_reference_id"),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull(),
-  completedAt: timestamp("completed_at", { withTimezone: true }),
-  cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
-  failedAt: timestamp("failed_at", { withTimezone: true }),
-  failureReason: text("failure_reason"),
-}, (table) => [
-  index("workflow_instances_tenant_status_idx").on(table.tenantId, table.status, table.updatedAt),
-  index("workflow_instances_definition_idx").on(table.tenantId, table.workflowDefinitionId, table.updatedAt),
-  index("workflow_instances_source_idx").on(table.tenantId, table.sourceType, table.sourceReferenceId),
-]);
-
-const workflowHumanTasks = pgTable("workflow_human_tasks", {
-  id: uuid("id").primaryKey(),
-  tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
-  workflowInstanceId: uuid("workflow_instance_id").notNull().references(() => workflowInstances.id, { onDelete: "cascade" }),
-  workflowDefinitionId: uuid("workflow_definition_id").notNull().references(() => workflowDefinitions.id, { onDelete: "cascade" }),
-  workflowVersion: integer("workflow_version").notNull(),
-  stepId: text("step_id").notNull(),
-  kind: text("kind").notNull(),
-  name: text("name").notNull(),
-  description: text("description").notNull().default(""),
-  status: text("status").notNull(),
-  assigneeUserId: uuid("assignee_user_id").references(() => users.id, { onDelete: "set null" }),
-  candidateUserIds: jsonb("candidate_user_ids").notNull().default([]),
-  candidateRoles: jsonb("candidate_roles").notNull().default([]),
-  formDefinitionId: uuid("form_definition_id"),
-  dueAt: timestamp("due_at", { withTimezone: true }),
-  output: jsonb("output"),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull(),
-  completedAt: timestamp("completed_at", { withTimezone: true }),
-}, (table) => [
-  index("workflow_human_tasks_tenant_status_idx").on(table.tenantId, table.status, table.dueAt),
-  index("workflow_human_tasks_instance_step_idx").on(table.tenantId, table.workflowInstanceId, table.stepId, table.status),
-  index("workflow_human_tasks_assignee_idx").on(table.tenantId, table.assigneeUserId, table.status),
-]);
+} from "../../index.js";
+import type { Database } from "@adminops/persistence";
+import { workflowDefinitions, workflowDefinitionVersions, workflowInstances, workflowHumanTasks } from "./schema.js";
 
 type DefinitionRow = typeof workflowDefinitions.$inferSelect;
 type VersionRow = typeof workflowDefinitionVersions.$inferSelect;
@@ -219,20 +134,30 @@ function taskFromRow(row: TaskRow): HumanTask {
 
 export class PostgresWorkflowDefinitionRepository implements WorkflowDefinitionRepository {
   constructor(private readonly db: Database) {}
+
   async findById(tenantId: string, id: string) {
     const [row] = await this.db.select().from(workflowDefinitions).where(and(eq(workflowDefinitions.tenantId, tenantId), eq(workflowDefinitions.id, id))).limit(1);
     return row ? currentDefinition(row) : null;
   }
-  async listByTenant(tenantId: string) { return (await this.db.select().from(workflowDefinitions).where(eq(workflowDefinitions.tenantId, tenantId)).orderBy(desc(workflowDefinitions.updatedAt))).map(currentDefinition); }
+
+  async listByTenant(tenantId: string) {
+    return (await this.db.select().from(workflowDefinitions).where(eq(workflowDefinitions.tenantId, tenantId)).orderBy(desc(workflowDefinitions.updatedAt))).map(currentDefinition);
+  }
+
   async findPublishedVersion(tenantId: string, id: string, version: number) {
     const [row] = await this.db.select().from(workflowDefinitionVersions).where(and(eq(workflowDefinitionVersions.tenantId, tenantId), eq(workflowDefinitionVersions.workflowDefinitionId, id), eq(workflowDefinitionVersions.version, version))).limit(1);
     return row ? publishedDefinition(row) : null;
   }
+
   async findLatestPublishedVersion(tenantId: string, id: string) {
     const [row] = await this.db.select().from(workflowDefinitionVersions).where(and(eq(workflowDefinitionVersions.tenantId, tenantId), eq(workflowDefinitionVersions.workflowDefinitionId, id))).orderBy(desc(workflowDefinitionVersions.version)).limit(1);
     return row ? publishedDefinition(row) : null;
   }
-  async listPublishedVersions(tenantId: string, id: string) { return (await this.db.select().from(workflowDefinitionVersions).where(and(eq(workflowDefinitionVersions.tenantId, tenantId), eq(workflowDefinitionVersions.workflowDefinitionId, id))).orderBy(desc(workflowDefinitionVersions.version))).map(publishedDefinition); }
+
+  async listPublishedVersions(tenantId: string, id: string) {
+    return (await this.db.select().from(workflowDefinitionVersions).where(and(eq(workflowDefinitionVersions.tenantId, tenantId), eq(workflowDefinitionVersions.workflowDefinitionId, id))).orderBy(desc(workflowDefinitionVersions.version))).map(publishedDefinition);
+  }
+
   async findPublishedByTrigger(tenantId: string, triggerType: WorkflowTriggerType, reference?: string | null) {
     const current = await this.listByTenant(tenantId);
     const results: WorkflowDefinition[] = [];
@@ -244,10 +169,12 @@ export class PostgresWorkflowDefinitionRepository implements WorkflowDefinitionR
     }
     return results;
   }
+
   async save(definition: WorkflowDefinition) {
     const data = definition.toPersistence();
     await this.db.insert(workflowDefinitions).values({ id: data.id, tenantId: data.tenantId, name: data.name, description: data.description, status: data.status, currentVersion: data.version, startStepId: data.startStepId, steps: data.steps as WorkflowStep[], triggers: data.triggers as WorkflowTrigger[], metadata: data.metadata as WorkflowMetadata, createdAt: data.createdAt, updatedAt: data.updatedAt, publishedAt: data.publishedAt, archivedAt: data.archivedAt }).onConflictDoUpdate({ target: workflowDefinitions.id, set: { name: data.name, description: data.description, status: data.status, currentVersion: data.version, startStepId: data.startStepId, steps: data.steps as WorkflowStep[], triggers: data.triggers as WorkflowTrigger[], metadata: data.metadata as WorkflowMetadata, updatedAt: data.updatedAt, publishedAt: data.publishedAt, archivedAt: data.archivedAt } });
   }
+
   async savePublishedVersion(definition: WorkflowDefinition) {
     if (definition.status !== "PUBLISHED" || !definition.publishedAt) throw new Error("Published workflow snapshot required");
     const data = definition.toPersistence();
@@ -257,10 +184,25 @@ export class PostgresWorkflowDefinitionRepository implements WorkflowDefinitionR
 
 export class PostgresWorkflowInstanceRepository implements WorkflowInstanceRepository {
   constructor(private readonly db: Database) {}
-  async findById(tenantId: string, id: string) { const [row] = await this.db.select().from(workflowInstances).where(and(eq(workflowInstances.tenantId, tenantId), eq(workflowInstances.id, id))).limit(1); return row ? instanceFromRow(row) : null; }
-  async listByTenant(tenantId: string, status?: WorkflowInstanceStatus) { const rows = status ? await this.db.select().from(workflowInstances).where(and(eq(workflowInstances.tenantId, tenantId), eq(workflowInstances.status, status))).orderBy(desc(workflowInstances.updatedAt)) : await this.db.select().from(workflowInstances).where(eq(workflowInstances.tenantId, tenantId)).orderBy(desc(workflowInstances.updatedAt)); return rows.map(instanceFromRow); }
-  async listByDefinition(tenantId: string, definitionId: string) { return (await this.db.select().from(workflowInstances).where(and(eq(workflowInstances.tenantId, tenantId), eq(workflowInstances.workflowDefinitionId, definitionId))).orderBy(desc(workflowInstances.updatedAt))).map(instanceFromRow); }
-  async findBySource(tenantId: string, sourceType: WorkflowTriggerType, sourceReferenceId: string) { return (await this.db.select().from(workflowInstances).where(and(eq(workflowInstances.tenantId, tenantId), eq(workflowInstances.sourceType, sourceType), eq(workflowInstances.sourceReferenceId, sourceReferenceId))).orderBy(desc(workflowInstances.updatedAt))).map(instanceFromRow); }
+
+  async findById(tenantId: string, id: string) {
+    const [row] = await this.db.select().from(workflowInstances).where(and(eq(workflowInstances.tenantId, tenantId), eq(workflowInstances.id, id))).limit(1);
+    return row ? instanceFromRow(row) : null;
+  }
+
+  async listByTenant(tenantId: string, status?: WorkflowInstanceStatus) {
+    const rows = status ? await this.db.select().from(workflowInstances).where(and(eq(workflowInstances.tenantId, tenantId), eq(workflowInstances.status, status))).orderBy(desc(workflowInstances.updatedAt)) : await this.db.select().from(workflowInstances).where(eq(workflowInstances.tenantId, tenantId)).orderBy(desc(workflowInstances.updatedAt));
+    return rows.map(instanceFromRow);
+  }
+
+  async listByDefinition(tenantId: string, definitionId: string) {
+    return (await this.db.select().from(workflowInstances).where(and(eq(workflowInstances.tenantId, tenantId), eq(workflowInstances.workflowDefinitionId, definitionId))).orderBy(desc(workflowInstances.updatedAt))).map(instanceFromRow);
+  }
+
+  async findBySource(tenantId: string, sourceType: WorkflowTriggerType, sourceReferenceId: string) {
+    return (await this.db.select().from(workflowInstances).where(and(eq(workflowInstances.tenantId, tenantId), eq(workflowInstances.sourceType, sourceType), eq(workflowInstances.sourceReferenceId, sourceReferenceId))).orderBy(desc(workflowInstances.updatedAt))).map(instanceFromRow);
+  }
+
   async save(instance: WorkflowInstance) {
     const data = instance.toPersistence();
     await this.db.insert(workflowInstances).values({ id: data.id, tenantId: data.tenantId, workflowDefinitionId: data.workflowDefinitionId, workflowVersion: data.workflowVersion, status: data.status, currentStepId: data.currentStepId, variables: data.variables as Record<string, unknown>, executionHistory: data.executionHistory as WorkflowExecutionEntry[], startedByUserId: data.startedByUserId, sourceType: data.sourceType, sourceReferenceId: data.sourceReferenceId, createdAt: data.createdAt, updatedAt: data.updatedAt, completedAt: data.completedAt, cancelledAt: data.cancelledAt, failedAt: data.failedAt, failureReason: data.failureReason }).onConflictDoUpdate({ target: workflowInstances.id, set: { status: data.status, currentStepId: data.currentStepId, variables: data.variables as Record<string, unknown>, executionHistory: data.executionHistory as WorkflowExecutionEntry[], updatedAt: data.updatedAt, completedAt: data.completedAt, cancelledAt: data.cancelledAt, failedAt: data.failedAt, failureReason: data.failureReason } });
@@ -269,10 +211,26 @@ export class PostgresWorkflowInstanceRepository implements WorkflowInstanceRepos
 
 export class PostgresHumanTaskRepository implements HumanTaskRepository {
   constructor(private readonly db: Database) {}
-  async findById(tenantId: string, id: string) { const [row] = await this.db.select().from(workflowHumanTasks).where(and(eq(workflowHumanTasks.tenantId, tenantId), eq(workflowHumanTasks.id, id))).limit(1); return row ? taskFromRow(row) : null; }
-  async findOpenByInstanceStep(tenantId: string, workflowInstanceId: string, stepId: string) { const [row] = await this.db.select().from(workflowHumanTasks).where(and(eq(workflowHumanTasks.tenantId, tenantId), eq(workflowHumanTasks.workflowInstanceId, workflowInstanceId), eq(workflowHumanTasks.stepId, stepId), notInArray(workflowHumanTasks.status, ["COMPLETED", "CANCELLED"]))).orderBy(desc(workflowHumanTasks.updatedAt)).limit(1); return row ? taskFromRow(row) : null; }
-  async listByTenant(tenantId: string, status?: HumanTaskStatus) { const rows = status ? await this.db.select().from(workflowHumanTasks).where(and(eq(workflowHumanTasks.tenantId, tenantId), eq(workflowHumanTasks.status, status))).orderBy(desc(workflowHumanTasks.updatedAt)) : await this.db.select().from(workflowHumanTasks).where(eq(workflowHumanTasks.tenantId, tenantId)).orderBy(desc(workflowHumanTasks.updatedAt)); return rows.map(taskFromRow); }
-  async listForUser(tenantId: string, userId: string, roles: readonly string[]) { return (await this.listByTenant(tenantId)).filter((task) => !["COMPLETED", "CANCELLED"].includes(task.status) && task.isEligible(userId, roles)); }
+
+  async findById(tenantId: string, id: string) {
+    const [row] = await this.db.select().from(workflowHumanTasks).where(and(eq(workflowHumanTasks.tenantId, tenantId), eq(workflowHumanTasks.id, id))).limit(1);
+    return row ? taskFromRow(row) : null;
+  }
+
+  async findOpenByInstanceStep(tenantId: string, workflowInstanceId: string, stepId: string) {
+    const [row] = await this.db.select().from(workflowHumanTasks).where(and(eq(workflowHumanTasks.tenantId, tenantId), eq(workflowHumanTasks.workflowInstanceId, workflowInstanceId), eq(workflowHumanTasks.stepId, stepId), notInArray(workflowHumanTasks.status, ["COMPLETED", "CANCELLED"]))).orderBy(desc(workflowHumanTasks.updatedAt)).limit(1);
+    return row ? taskFromRow(row) : null;
+  }
+
+  async listByTenant(tenantId: string, status?: HumanTaskStatus) {
+    const rows = status ? await this.db.select().from(workflowHumanTasks).where(and(eq(workflowHumanTasks.tenantId, tenantId), eq(workflowHumanTasks.status, status))).orderBy(desc(workflowHumanTasks.updatedAt)) : await this.db.select().from(workflowHumanTasks).where(eq(workflowHumanTasks.tenantId, tenantId)).orderBy(desc(workflowHumanTasks.updatedAt));
+    return rows.map(taskFromRow);
+  }
+
+  async listForUser(tenantId: string, userId: string, roles: readonly string[]) {
+    return (await this.listByTenant(tenantId)).filter((task) => !["COMPLETED", "CANCELLED"].includes(task.status) && task.isEligible(userId, roles));
+  }
+
   async save(task: HumanTask) {
     const data = task.toPersistence();
     await this.db.insert(workflowHumanTasks).values({ id: data.id, tenantId: data.tenantId, workflowInstanceId: data.workflowInstanceId, workflowDefinitionId: data.workflowDefinitionId, workflowVersion: data.workflowVersion, stepId: data.stepId, kind: data.kind, name: data.name, description: data.description, status: data.status, assigneeUserId: data.assigneeUserId, candidateUserIds: [...data.candidateUserIds], candidateRoles: [...data.candidateRoles], formDefinitionId: data.formDefinitionId, dueAt: data.dueAt, output: data.output as Record<string, unknown> | null, createdAt: data.createdAt, updatedAt: data.updatedAt, completedAt: data.completedAt }).onConflictDoUpdate({ target: workflowHumanTasks.id, set: { status: data.status, assigneeUserId: data.assigneeUserId, candidateUserIds: [...data.candidateUserIds], candidateRoles: [...data.candidateRoles], dueAt: data.dueAt, output: data.output as Record<string, unknown> | null, updatedAt: data.updatedAt, completedAt: data.completedAt } });

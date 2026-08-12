@@ -6,9 +6,9 @@ import {
   type Tenant,
   type TenantRepository,
   type TenantStatus,
-} from "@adminops/tenancy";
-import type { Database } from "./database.js";
-import { isUniqueViolation } from "./pg-errors.js";
+} from "../../index.js";
+import type { Database } from "@adminops/persistence";
+import { isUniqueViolation } from "@adminops/persistence/src/pg-errors.js";
 import { tenants } from "./schema.js";
 
 type TenantRow = typeof tenants.$inferSelect;

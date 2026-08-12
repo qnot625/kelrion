@@ -4,8 +4,8 @@ import {
   type AuditEvent,
   type AuditLog,
   type RecordAuditEventInput,
-} from "@adminops/audit";
-import type { Database } from "./database.js";
+} from "../../index.js";
+import type { Database } from "@adminops/persistence";
 import { auditEvents } from "./schema.js";
 
 type AuditEventRow = typeof auditEvents.$inferSelect;

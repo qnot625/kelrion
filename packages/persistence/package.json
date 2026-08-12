@@ -3,7 +3,10 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "exports": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./src/*": "./src/*"
+  },
   "scripts": {
     "test": "node --import tsx --test tests/repositories.test.ts tests/branch-service-repositories.test.ts tests/waitlist-repository.test.ts tests/workforce-core-repositories.test.ts tests/forms-repositories.test.ts tests/workflow-repositories.test.ts tests/approval-repositories.test.ts tests/service-desk-repositories.test.ts tests/queue-repositories.test.ts tests/notification-repositories.test.ts"
   },
@@ -18,6 +21,7 @@
     "@adminops/service-desk": "*",
     "@adminops/tenancy": "*",
     "@adminops/workflow": "*",
+    "@adminops/workforce-core": "*",
     "drizzle-orm": "^0.45.2",
     "pg": "^8.13.1",
     "@adminops/queue": "*"

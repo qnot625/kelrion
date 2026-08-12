@@ -12,11 +12,11 @@ import {
   type ApprovalRequestStatus,
   type ApprovalSourceType,
   type ApprovalStage,
-} from "@adminops/approvals";
-import type { Database } from "./database.js";
-import { tenants } from "./schema.js";
+} from "../../index.js";
+import type { Database } from "@adminops/persistence";
+import { tenants } from "@adminops/tenancy";
 
-const approvalPolicies = pgTable("approval_policies", {
+export const approvalPolicies = pgTable("approval_policies", {
   id: uuid("id").primaryKey(),
   tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
@@ -31,7 +31,7 @@ const approvalPolicies = pgTable("approval_policies", {
   archivedAt: timestamp("archived_at", { withTimezone: true }),
 }, (table) => [index("approval_policies_tenant_status_idx").on(table.tenantId, table.status, table.updatedAt)]);
 
-const approvalPolicyVersions = pgTable("approval_policy_versions", {
+export const approvalPolicyVersions = pgTable("approval_policy_versions", {
   tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
   approvalPolicyId: uuid("approval_policy_id").notNull().references(() => approvalPolicies.id, { onDelete: "cascade" }),
   version: integer("version").notNull(),
@@ -46,7 +46,7 @@ const approvalPolicyVersions = pgTable("approval_policy_versions", {
   index("approval_policy_versions_latest_idx").on(table.tenantId, table.approvalPolicyId, table.version),
 ]);
 
-const approvalRequests = pgTable("approval_requests", {
+export const approvalRequests = pgTable("approval_requests", {
   id: uuid("id").primaryKey(),
   tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
   approvalPolicyId: uuid("approval_policy_id").notNull().references(() => approvalPolicies.id, { onDelete: "cascade" }),
@@ -72,7 +72,7 @@ const approvalRequests = pgTable("approval_requests", {
   index("approval_requests_requester_idx").on(table.tenantId, table.requestedByUserId, table.updatedAt),
 ]);
 
-const approvalDecisions = pgTable("approval_decisions", {
+export const approvalDecisions = pgTable("approval_decisions", {
   id: uuid("id").primaryKey(),
   tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
   approvalRequestId: uuid("approval_request_id").notNull().references(() => approvalRequests.id, { onDelete: "cascade" }),

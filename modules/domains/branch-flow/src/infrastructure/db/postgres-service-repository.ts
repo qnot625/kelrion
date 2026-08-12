@@ -9,10 +9,23 @@ import {
   DuplicateBranchServiceMappingError,
   validateServiceCode,
   validateServiceDuration,
-} from "@adminops/branch-flow";
-import type { Database } from "./database.js";
+} from "../../index.js";
+import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
+type Database = PgDatabase<PgQueryResultHKT, any>;
 import { services, serviceRequirements, branchServices } from "./schema.js";
-import { isUniqueViolation } from "./pg-errors.js";
+
+const UNIQUE_VIOLATION = "23505";
+
+function isUniqueViolation(error: unknown): boolean {
+  let current: unknown = error;
+  for (let depth = 0; current && depth < 5; depth += 1) {
+    if (typeof current === "object" && "code" in current && current.code === UNIQUE_VIOLATION) {
+      return true;
+    }
+    current = typeof current === "object" && "cause" in current ? current.cause : undefined;
+  }
+  return false;
+}
 
 type ServiceRow = typeof services.$inferSelect;
 type ServiceRequirementRow = typeof serviceRequirements.$inferSelect;

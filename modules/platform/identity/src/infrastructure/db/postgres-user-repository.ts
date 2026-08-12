@@ -6,9 +6,9 @@ import {
   type Role,
   type User,
   type UserRepository,
-} from "@adminops/identity";
-import type { Database } from "./database.js";
-import { isUniqueViolation } from "./pg-errors.js";
+} from "../../index.js";
+import type { Database } from "@adminops/persistence";
+import { isUniqueViolation } from "@adminops/persistence/src/pg-errors.js";
 import { users } from "./schema.js";
 
 type UserRow = typeof users.$inferSelect;

@@ -1,6 +1,7 @@
 import { and, asc, eq, max } from "drizzle-orm";
-import type { WaitlistEntry, WaitlistRepository, WaitlistStatus } from "@adminops/branch-flow";
-import type { Database } from "./database.js";
+import type { WaitlistEntry, WaitlistRepository, WaitlistStatus } from "../../index.js";
+import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
+type Database = PgDatabase<PgQueryResultHKT, any>;
 import { appointmentWaitlists } from "./schema.js";
 
 type WaitlistRow = typeof appointmentWaitlists.$inferSelect;

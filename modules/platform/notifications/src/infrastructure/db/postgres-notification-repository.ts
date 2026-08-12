@@ -13,16 +13,17 @@ import type {
   NotificationTemplateRepository,
   NotificationTemplateStatus,
   NotificationChannel,
-} from "@adminops/notifications";
-import type { Database } from "./database.js";
-import { tenants, users } from "./schema.js";
+} from "../../index.js";
+import type { Database } from "@adminops/persistence";
+import { tenants } from "@adminops/tenancy";
+import { users } from "@adminops/identity";
 
-const notificationSequences = pgTable("notification_sequences", {
+export const notificationSequences = pgTable("notification_sequences", {
   tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
   lastSequence: bigint("last_sequence", { mode: "number" }).notNull().default(0),
 }, (table) => [primaryKey({ columns: [table.tenantId] })]);
 
-const notifications = pgTable("notifications", {
+export const notifications = pgTable("notifications", {
   id: uuid("id").primaryKey(),
   tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
   sequence: bigint("sequence", { mode: "number" }).notNull(),
@@ -42,7 +43,7 @@ const notifications = pgTable("notifications", {
   index("notifications_entity_idx").on(table.tenantId, table.entityType, table.entityId),
 ]);
 
-const notificationPreferences = pgTable("notification_preferences", {
+export const notificationPreferences = pgTable("notification_preferences", {
   tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
   userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   emailEnabled: boolean("email_enabled").notNull().default(false),
@@ -54,7 +55,7 @@ const notificationPreferences = pgTable("notification_preferences", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull(),
 }, (table) => [primaryKey({ columns: [table.tenantId, table.userId] })]);
 
-const notificationTemplates = pgTable("notification_templates", {
+export const notificationTemplates = pgTable("notification_templates", {
   id: uuid("id").primaryKey(),
   tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
   key: text("key").notNull(),
@@ -69,7 +70,7 @@ const notificationTemplates = pgTable("notification_templates", {
   index("notification_templates_tenant_status_idx").on(table.tenantId, table.status, table.key),
 ]);
 
-const notificationDeliveries = pgTable("notification_deliveries", {
+export const notificationDeliveries = pgTable("notification_deliveries", {
   id: uuid("id").primaryKey(),
   tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
   notificationId: uuid("notification_id").notNull().references(() => notifications.id, { onDelete: "cascade" }),

@@ -14,3 +14,7 @@ export * from "./waitlist.js";
 export * from "./waitlist-repository.js";
 export * from "./in-memory-waitlist-repository.js";
 export * from "./infrastructure/db/schema.js";
+export * from "./infrastructure/db/postgres-branch-repository.js";
+export * from "./infrastructure/db/postgres-service-repository.js";
+export * from "./infrastructure/db/postgres-waitlist-repository.js";
+export * from "./infrastructure/db/postgres-appointment-repository.js";

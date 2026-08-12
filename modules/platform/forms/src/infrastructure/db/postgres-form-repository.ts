@@ -9,11 +9,12 @@ import {
   type FieldResponseProps,
   type SubmissionMetadataProps,
   type SubmissionStatus,
-} from "@adminops/forms";
-import type { Database } from "./database.js";
-import { tenants, users } from "./schema.js";
+} from "../../index.js";
+import type { Database } from "@adminops/persistence";
+import { tenants } from "@adminops/tenancy";
+import { users } from "@adminops/identity";
 
-const formDefinitions = pgTable(
+export const formDefinitions = pgTable(
   "form_definitions",
   {
     id: uuid("id").primaryKey(),
@@ -35,7 +36,7 @@ const formDefinitions = pgTable(
   ],
 );
 
-const formDefinitionVersions = pgTable(
+export const formDefinitionVersions = pgTable(
   "form_definition_versions",
   {
     tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
@@ -55,7 +56,7 @@ const formDefinitionVersions = pgTable(
   ],
 );
 
-const formSubmissions = pgTable(
+export const formSubmissions = pgTable(
   "form_submissions",
   {
     id: uuid("id").primaryKey(),

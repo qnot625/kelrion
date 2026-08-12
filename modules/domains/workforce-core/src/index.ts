@@ -4,3 +4,6 @@ export * from "./employee.js";
 export * from "./employee-service.js";
 export * from "./attendance.js";
 export * from "./in-memory-repositories.js";
+export * from "./infrastructure/db/schema.js";
+export * from "./infrastructure/db/postgres-employee-repository.js";
+export * from "./infrastructure/db/postgres-attendance-repository.js";
