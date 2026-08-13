@@ -8,7 +8,7 @@ import {
   type UserRepository,
 } from "../../index.js";
 import type { Database } from "@adminops/persistence";
-import { isUniqueViolation } from "@adminops/persistence/src/pg-errors.js";
+import { isUniqueViolation } from "@adminops/persistence";
 import { users } from "./schema.js";
 
 type UserRow = typeof users.$inferSelect;

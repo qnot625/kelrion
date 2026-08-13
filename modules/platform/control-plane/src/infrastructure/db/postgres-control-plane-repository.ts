@@ -16,7 +16,7 @@ import {
 } from "../../index.js";
 import { normalizeEmail } from "@adminops/identity";
 import type { Database } from "@adminops/persistence";
-import { isUniqueViolation } from "@adminops/persistence/src/pg-errors.js";
+import { isUniqueViolation } from "@adminops/persistence";
 import { billingInvoices, organisationSubscriptions, platformAdministrators } from "./schema.js";
 
 type SubscriptionRow = typeof organisationSubscriptions.$inferSelect;

@@ -1,10 +1,7 @@
 import { asc, desc, eq, sql } from "drizzle-orm";
-import {
-  computeEventHash,
-  type AuditEvent,
-  type AuditLog,
-  type RecordAuditEventInput,
-} from "../../index.js";
+import { computeEventHash } from "../../hash-chain.js";
+import type { AuditEvent, RecordAuditEventInput } from "../../audit-event.js";
+import type { AuditLog } from "../../audit-log.js";
 import type { Database } from "@adminops/persistence";
 import { auditEvents } from "./schema.js";
 

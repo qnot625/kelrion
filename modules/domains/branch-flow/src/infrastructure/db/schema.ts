@@ -1,5 +1,5 @@
 import { boolean, doublePrecision, index, integer, jsonb, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
-import { tenants } from "@adminops/tenancy/src/infrastructure/db/schema.js";
+import { tenants } from "@adminops/tenancy";
 
 export const branches = pgTable(
   "branches",

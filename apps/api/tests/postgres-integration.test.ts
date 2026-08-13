@@ -5,19 +5,17 @@ import { drizzle } from "drizzle-orm/pglite";
 import { ControlPlaneService, PlatformAdminAuthService } from "@adminops/control-plane";
 import { AuthService } from "@adminops/identity";
 import { AppointmentService } from "@adminops/branch-flow";
+import { runMigrations, schema, type Database } from "@adminops/persistence";
+import { PostgresTenantRepository } from "@adminops/tenancy";
+import { PostgresUserRepository } from "@adminops/identity";
+import { PostgresControlPlaneRepository } from "@adminops/control-plane";
 import {
   PostgresAppointmentRepository,
-  PostgresAuditLog,
-  PostgresControlPlaneRepository,
   PostgresBranchRepository,
   PostgresServiceRepository,
   PostgresWaitlistRepository,
-  PostgresTenantRepository,
-  PostgresUserRepository,
-  runMigrations,
-  schema,
-  type Database,
-} from "@adminops/persistence";
+} from "@adminops/branch-flow";
+import { PostgresAuditLog } from "@adminops/audit";
 import {
   CustomerCaseService,
   ExecutiveSummaryService,

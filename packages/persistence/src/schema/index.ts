@@ -12,7 +12,7 @@ import {
   serviceRequirements,
   services,
 } from "@adminops/branch-flow";
-import { auditEvents } from "@adminops/audit";
+import { auditEvents } from "./audit.js";
 import { approvalPolicies, approvalRequests } from "@adminops/approvals";
 import { formDefinitions, formSubmissions } from "@adminops/forms";
 import {
@@ -52,9 +52,7 @@ export {
   serviceRequirements,
   services,
 } from "@adminops/branch-flow";
-export { auditEvents } from "@adminops/audit";
-<<<<<<< HEAD
-=======
+export { auditEvents } from "./audit.js";
 export { approvalPolicies, approvalRequests } from "@adminops/approvals";
 export { formDefinitions, formSubmissions } from "@adminops/forms";
 export {
@@ -79,7 +77,6 @@ export {
   workflowInstances,
   workflowHumanTasks,
 } from "@adminops/workflow";
->>>>>>> 7e96c58 (organized)
 
 export const schema = {
   tenants,
@@ -97,8 +94,6 @@ export const schema = {
   appointments,
   appointmentWaitlists,
   auditEvents,
-<<<<<<< HEAD
-=======
   approvalPolicies,
   approvalRequests,
   formDefinitions,
@@ -123,5 +118,4 @@ export const schema = {
   workflowDefinitionVersions,
   workflowInstances,
   workflowHumanTasks,
->>>>>>> 7e96c58 (organized)
 };

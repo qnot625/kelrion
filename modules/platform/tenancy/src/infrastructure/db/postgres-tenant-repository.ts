@@ -8,7 +8,7 @@ import {
   type TenantStatus,
 } from "../../index.js";
 import type { Database } from "@adminops/persistence";
-import { isUniqueViolation } from "@adminops/persistence/src/pg-errors.js";
+import { isUniqueViolation } from "@adminops/persistence";
 import { tenants } from "./schema.js";
 
 type TenantRow = typeof tenants.$inferSelect;

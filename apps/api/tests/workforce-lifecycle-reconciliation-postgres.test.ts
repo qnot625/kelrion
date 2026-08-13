@@ -3,14 +3,10 @@ import { test } from "node:test";
 import { PGlite } from "@electric-sql/pglite";
 import { drizzle } from "drizzle-orm/pglite";
 import { EmployeeService } from "@adminops/workforce-core";
-import {
-  PostgresEmployeeRepository,
-  PostgresTenantRepository,
-  PostgresUserRepository,
-  runMigrations,
-  schema,
-  type Database,
-} from "@adminops/persistence";
+import { PostgresEmployeeRepository } from "@adminops/workforce-core";
+import { PostgresTenantRepository } from "@adminops/tenancy";
+import { PostgresUserRepository } from "@adminops/identity";
+import { runMigrations, schema, type Database } from "@adminops/persistence";
 import {
   PostgresWorkforceLifecycleRepository,
   WorkforceLifecycleService,

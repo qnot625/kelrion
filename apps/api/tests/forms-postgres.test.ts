@@ -3,15 +3,10 @@ import { test } from "node:test";
 import { PGlite } from "@electric-sql/pglite";
 import { drizzle } from "drizzle-orm/pglite";
 import { FormDefinitionService, SubmissionService } from "@adminops/forms";
-import {
-  PostgresFormDefinitionRepository,
-  PostgresFormSubmissionRepository,
-  PostgresTenantRepository,
-  PostgresUserRepository,
-  runMigrations,
-  schema,
-  type Database,
-} from "@adminops/persistence";
+import { PostgresFormDefinitionRepository, PostgresFormSubmissionRepository } from "@adminops/forms";
+import { PostgresTenantRepository } from "@adminops/tenancy";
+import { PostgresUserRepository } from "@adminops/identity";
+import { runMigrations, schema, type Database } from "@adminops/persistence";
 
 test("forms services run against real PGlite/PostgreSQL tables", async () => {
   const db = drizzle(new PGlite(), { schema }) as unknown as Database;

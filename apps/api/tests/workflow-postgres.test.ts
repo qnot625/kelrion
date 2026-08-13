@@ -5,13 +5,11 @@ import { drizzle } from "drizzle-orm/pglite";
 import { WorkflowEngineService } from "@adminops/workflow";
 import {
   PostgresHumanTaskRepository,
-  PostgresTenantRepository,
   PostgresWorkflowDefinitionRepository,
   PostgresWorkflowInstanceRepository,
-  runMigrations,
-  schema,
-  type Database,
-} from "@adminops/persistence";
+} from "@adminops/workflow";
+import { PostgresTenantRepository } from "@adminops/tenancy";
+import { runMigrations, schema, type Database } from "@adminops/persistence";
 
 test("workflow engine runs against real PGlite/PostgreSQL tables", async () => {
   const db = drizzle(new PGlite(), { schema }) as unknown as Database;

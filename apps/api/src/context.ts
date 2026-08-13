@@ -86,36 +86,52 @@ import {
 } from "../../../modules/domains/workforce-core/src/index.js";
 import {
   connectPostgres,
+  runMigrations,
+} from "@adminops/persistence";
+import {
   PostgresApprovalPolicyRepository,
   PostgresApprovalRequestRepository,
+} from "@adminops/approvals";
+import {
   PostgresAppointmentRepository,
+  PostgresBranchRepository,
+  PostgresServiceRepository,
+  PostgresWaitlistRepository,
+} from "@adminops/branch-flow";
+import {
   PostgresAttendanceCorrectionRepository,
   PostgresAttendanceRepository,
-  PostgresAuditLog,
-  PostgresBranchRepository,
   PostgresEmployeeRepository,
+} from "@adminops/workforce-core";
+import { PostgresAuditLog } from "@adminops/audit";
+import { PostgresControlPlaneRepository } from "@adminops/control-plane";
+import {
   PostgresFormDefinitionRepository,
   PostgresFormSubmissionRepository,
-  PostgresHumanTaskRepository,
+} from "@adminops/forms";
+import {
   PostgresNotificationDeliveryRepository,
   PostgresNotificationPreferenceRepository,
   PostgresNotificationRepository,
   PostgresNotificationTemplateRepository,
+} from "@adminops/notifications";
+import {
   PostgresQueueConfigurationRepository,
   PostgresQueueEntryRepository,
   PostgresQueueEventRepository,
+} from "@adminops/queue";
+import {
   PostgresServiceDeskCatalogRepository,
   PostgresServiceDeskSlaPolicyRepository,
   PostgresServiceDeskTicketRepository,
-  PostgresServiceRepository,
-  PostgresWaitlistRepository,
+} from "@adminops/service-desk";
+import {
   PostgresWorkflowDefinitionRepository,
   PostgresWorkflowInstanceRepository,
-  PostgresControlPlaneRepository,
-  PostgresTenantRepository,
-  PostgresUserRepository,
-  runMigrations,
-} from "@adminops/persistence";
+  PostgresHumanTaskRepository,
+} from "@adminops/workflow";
+import { PostgresTenantRepository } from "@adminops/tenancy";
+import { PostgresUserRepository } from "@adminops/identity";
 import {
   CustomerCaseService,
   ExecutiveSummaryService,
